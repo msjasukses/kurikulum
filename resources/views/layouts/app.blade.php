@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@yield('title', 'Dashboard') - {{ config('app.name') }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <style>
+        body { background:#f4f6f9; }
+        .sidebar { width:260px; height:100vh; background:#1e2a3a; color:#cfd8e3; position:fixed; top:0; left:0; overflow-y:auto; }
+        .sidebar a { color:#cfd8e3; text-decoration:none; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background:#2c3e50; color:#fff; }
+        .sidebar .brand { color:#fff; font-weight:600; padding:1rem; border-bottom:1px solid #2c3e50; }
+        .content-wrapper { margin-left:260px; }
+        .topbar { background:#fff; border-bottom:1px solid #e3e6ea; }
+        .menu-group-title { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:#7d8ba1; padding:.75rem 1rem .25rem; }
+        .menu-toggle { width:100%; text-align:left; background:transparent; border:0; color:#cfd8e3; }
+        .menu-toggle:hover { background:#2c3e50; color:#fff; }
+        .menu-toggle .chev { transition:transform .2s; font-size:.7rem; }
+        .menu-toggle.collapsed .chev { transform:rotate(-90deg); }
+        .menu-sub .nav-link { padding-left:2.4rem !important; font-size:.9rem; }
+        @media (max-width: 991.98px) {
+            .sidebar { left:-260px; transition:left .2s; z-index:1040; }
+            .sidebar.show { left:0; }
+            .content-wrapper { margin-left:0; }
+        }
+        .badge-role { font-size:.7rem; }
+        .sidebar-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1039; }
+        .sidebar-backdrop.show { display:block; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="brand d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-mortarboard-fill me-2"></i>SIM Kurikulum</span>
+        <button type="button" class="btn btn-sm text-white d-lg-none p-0" onclick="tutupSidebar()" aria-label="Tutup menu">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <nav class="nav flex-column py-2" id="sidebarNav">
+        <a class="nav-link px-3 py-2 {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+        </a>
+
+        @can('admin')
+        @php($open = request()->routeIs('setting.*'))
+        <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpSetting">
+            <i class="bi bi-gear me-2"></i>Setting Sekolah <i class="bi bi-chevron-down ms-auto chev"></i>
+        </button>
+        <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpSetting" data-bs-parent="#sidebarNav">
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.identitas*') ? 'active':'' }}" href="{{ route('setting.identitas.edit') }}"><i class="bi bi-building me-2"></i>Identitas Sekolah</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.jam-mengajar*') ? 'active':'' }}" href="{{ route('setting.jam-mengajar.index') }}"><i class="bi bi-clock me-2"></i>Jam Mengajar</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.mata-pelajaran*') ? 'active':'' }}" href="{{ route('setting.mata-pelajaran.index') }}"><i class="bi bi-journal-bookmark me-2"></i>Mata Pelajaran</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.jenis-eskul*') ? 'active':'' }}" href="{{ route('setting.jenis-eskul.index') }}"><i class="bi bi-trophy me-2"></i>Jenis Eskul</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.tingkat-kelas*') ? 'active':'' }}" href="{{ route('setting.tingkat-kelas.index') }}"><i class="bi bi-stack me-2"></i>Tingkat Kelas</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.jurusan*') ? 'active':'' }}" href="{{ route('setting.jurusan.index') }}"><i class="bi bi-diagram-3 me-2"></i>Jurusan</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.tahun-ajaran*') ? 'active':'' }}" href="{{ route('setting.tahun-ajaran.index') }}"><i class="bi bi-calendar-range me-2"></i>Tahun Ajaran</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.kelas*') ? 'active':'' }}" href="{{ route('setting.kelas.index') }}"><i class="bi bi-door-open me-2"></i>Kelas / Rombel</a>
+        </div>
+
+        @php($open = request()->routeIs('kepegawaian.*'))
+        <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpKepegawaian">
+            <i class="bi bi-person-badge me-2"></i>Kepegawaian <i class="bi bi-chevron-down ms-auto chev"></i>
+        </button>
+        <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpKepegawaian" data-bs-parent="#sidebarNav">
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kepegawaian.pegawai*') ? 'active':'' }}" href="{{ route('kepegawaian.pegawai.index') }}"><i class="bi bi-person-badge me-2"></i>Data Pegawai</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kepegawaian.wali-kelas*') ? 'active':'' }}" href="{{ route('kepegawaian.wali-kelas.index') }}"><i class="bi bi-person-check me-2"></i>Data Wali Kelas</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kepegawaian.guru-mapel*') ? 'active':'' }}" href="{{ route('kepegawaian.guru-mapel.index') }}"><i class="bi bi-easel me-2"></i>Data Guru Mata Pelajaran</a>
+        </div>
+
+        @endcan
+
+        @canany(['admin','siswa'])
+        @php($open = request()->routeIs('kesiswaan.*'))
+        <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpKesiswaan">
+            <i class="bi bi-people me-2"></i>Kesiswaan <i class="bi bi-chevron-down ms-auto chev"></i>
+        </button>
+        <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpKesiswaan" data-bs-parent="#sidebarNav">
+            @can('admin')
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kesiswaan.siswa*') ? 'active':'' }}" href="{{ route('kesiswaan.siswa.index') }}"><i class="bi bi-people me-2"></i>Data Siswa</a>
+            @endcan
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kesiswaan.orang-tua*') ? 'active':'' }}" href="{{ route('kesiswaan.orang-tua.index') }}"><i class="bi bi-person-hearts me-2"></i>Data Orang Tua</a>
+        </div>
+        @endcanany
+
+        @canany(['admin','guru'])
+        @php($open = request()->routeIs('kurikulum.*'))
+        <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpKurikulum">
+            <i class="bi bi-journal-bookmark me-2"></i>Kurikulum <i class="bi bi-chevron-down ms-auto chev"></i>
+        </button>
+        <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpKurikulum" data-bs-parent="#sidebarNav">
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kurikulum.jadwal*') ? 'active':'' }}" href="{{ route('kurikulum.jadwal.index') }}"><i class="bi bi-calendar-week me-2"></i>Jadwal Mengajar Guru</a>
+            @can('admin')
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kurikulum.agenda*') ? 'active':'' }}" href="{{ route('kurikulum.agenda.index') }}"><i class="bi bi-journal-check me-2"></i>Agenda Mengajar</a>
+            @endcan
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kurikulum.cp-tp-atp*') ? 'active':'' }}" href="{{ route('kurikulum.cp-tp-atp.index') }}"><i class="bi bi-diagram-2 me-2"></i>Pemetaan CP-TP-ATP</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kurikulum.modul-ajar*') ? 'active':'' }}" href="{{ route('kurikulum.modul-ajar.index') }}"><i class="bi bi-file-earmark-text me-2"></i>Modul Ajar Digital</a>
+            @can('admin')
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kurikulum.alokasi-jam*') ? 'active':'' }}" href="{{ route('kurikulum.alokasi-jam.index') }}"><i class="bi bi-hourglass-split me-2"></i>Alokasi Jam Mapel</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('kurikulum.analisis-guru*') ? 'active':'' }}" href="{{ route('kurikulum.analisis-guru.index') }}"><i class="bi bi-bar-chart me-2"></i>Analisis Kebutuhan Guru</a>
+            @endcan
+        </div>
+        @endcanany
+
+        @php($open = request()->routeIs('ruangbelajar.*'))
+        <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpRuangBelajar">
+            <i class="bi bi-easel me-2"></i>Ruang Belajar <i class="bi bi-chevron-down ms-auto chev"></i>
+        </button>
+        <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpRuangBelajar" data-bs-parent="#sidebarNav">
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('ruangbelajar.materi*') ? 'active':'' }}" href="{{ route('ruangbelajar.materi.index') }}"><i class="bi bi-play-btn me-2"></i>Materi Online</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('ruangbelajar.tugas*') ? 'active':'' }}" href="{{ route('ruangbelajar.tugas.index') }}"><i class="bi bi-clipboard-check me-2"></i>Tugas</a>
+        </div>
+
+        @unless(auth()->user()->isGuru())
+        @php($open = request()->routeIs('absensi.*'))
+        <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpAbsensi">
+            <i class="bi bi-clipboard2-check me-2"></i>Absensi <i class="bi bi-chevron-down ms-auto chev"></i>
+        </button>
+        <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpAbsensi" data-bs-parent="#sidebarNav">
+            @can('admin')
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('absensi.rekap-kelas*') ? 'active':'' }}" href="{{ route('absensi.rekap-kelas.index') }}"><i class="bi bi-table me-2"></i>Rekap per Kelas</a>
+            @endcan
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('absensi.rekap-siswa*') ? 'active':'' }}" href="{{ route('absensi.rekap-siswa.index') }}"><i class="bi bi-person-lines-fill me-2"></i>Rekap per Siswa</a>
+            @can('admin')
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('absensi.koreksi*') ? 'active':'' }}" href="{{ route('absensi.koreksi.index') }}"><i class="bi bi-pencil-square me-2"></i>Koreksi Absensi</a>
+            @endcan
+        </div>
+        @endunless
+
+        @can('admin')
+        @php($open = request()->routeIs('users.*'))
+        <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpUsers">
+            <i class="bi bi-shield-lock me-2"></i>Manajemen User <i class="bi bi-chevron-down ms-auto chev"></i>
+        </button>
+        <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpUsers" data-bs-parent="#sidebarNav">
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('users.admin*') ? 'active':'' }}" href="{{ route('users.admin.index') }}"><i class="bi bi-shield-lock me-2"></i>User Admin</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('users.siswa*') ? 'active':'' }}" href="{{ route('users.siswa.index') }}"><i class="bi bi-person-vcard me-2"></i>User Siswa</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('users.guru*') ? 'active':'' }}" href="{{ route('users.guru.index') }}"><i class="bi bi-person-workspace me-2"></i>User Guru</a>
+        </div>
+        @endcan
+    </nav>
+</div>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="tutupSidebar()"></div>
+
+<div class="content-wrapper">
+    <div class="topbar d-flex align-items-center justify-content-between px-3 py-2">
+        <button class="btn btn-sm btn-outline-secondary d-lg-none" onclick="bukaTutupSidebar()">
+            <i class="bi bi-list"></i>
+        </button>
+        <div></div>
+        <div class="dropdown">
+            <button class="btn btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle me-1"></i> {{ auth()->user()->name }}
+                <span class="badge bg-secondary badge-role text-uppercase ms-1">{{ auth()->user()->role }}</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <form action="{{ route('logout') }}" method="POST">
+                        @csrf
+                        <button class="dropdown-item" type="submit"><i class="bi bi-box-arrow-right me-2"></i>Keluar</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="p-3 p-md-4">
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+                <button class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                <button class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        <h4 class="mb-3">@yield('title', 'Dashboard')</h4>
+
+        @yield('content')
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Buka/tutup sidebar di layar kecil (HP/tablet) + backdrop untuk menutup
+    // dengan tap di luar menu.
+    function bukaTutupSidebar() {
+        var terbuka = document.getElementById('sidebar').classList.toggle('show');
+        document.getElementById('sidebarBackdrop').classList.toggle('show', terbuka);
+    }
+    function tutupSidebar() {
+        document.getElementById('sidebar').classList.remove('show');
+        document.getElementById('sidebarBackdrop').classList.remove('show');
+    }
+
+    // Semua elemen <select class="form-select"> di seluruh aplikasi otomatis
+    // dijadikan Select2 (dropdown dengan pencarian), termasuk yang di-load
+    // lewat halaman baru maupun ditambahkan lewat AJAX/partial di kemudian hari.
+    function initSelect2(context) {
+        $(context || document).find('select.form-select').each(function () {
+            var $sel = $(this);
+            if ($sel.hasClass('select2-hidden-accessible')) {
+                return; // sudah diinisialisasi
+            }
+            var placeholderText = $sel.find('option[value=""]').first().text() || 'Pilih...';
+            $sel.select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: placeholderText,
+                allowClear: !$sel.prop('required'),
+                language: {
+                    noResults: function () { return 'Tidak ada hasil ditemukan'; },
+                    searching: function () { return 'Mencari...'; }
+                }
+            });
+        });
+    }
+
+    $(function () {
+        initSelect2(document);
+    });
+</script>
+@stack('scripts')
+</body>
+</html>

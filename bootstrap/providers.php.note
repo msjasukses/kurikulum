@@ -1,0 +1,1 @@
+(Laravel 10 mendaftarkan provider di config/app.php, bukan file terpisah)

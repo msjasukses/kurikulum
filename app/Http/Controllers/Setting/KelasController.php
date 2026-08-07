@@ -11,6 +11,9 @@ class KelasController extends BaseCrudController
     protected string $routeName = 'setting.kelas';
     protected string $title = 'Kelas / Rombel';
 
+    /** Daftar rombel mengikuti tahun ajaran yang dipilih di topbar. */
+    protected ?string $tahunAjaranColumn = 'tahun_ajaran_id';
+
     /**
      * Data bersumber dari database datacenter, tabel rombongan_belajar
      * (lihat App\Models\Kelas), jadi menu ini read-only: tidak ada

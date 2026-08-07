@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Models\GuruMapel;
 use App\Models\Kelas;
-use App\Models\TahunAjaran;
 use App\Models\TingkatKelas;
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Support\Collection;
 
 /**
  * Pembatas pilihan mapel/kelas untuk guru yang sedang login: mengikuti
  * penugasan di menu "Data Guru Mata Pelajaran" (tabel guru_mapel database
- * datacenter) pada tahun ajaran aktif. Admin tidak dibatasi (return null).
+ * datacenter) pada tahun ajaran yang sedang dipilih di topbar. Admin tidak
+ * dibatasi (return null).
  */
 trait FilterPenugasanGuru
 {
@@ -31,10 +32,10 @@ trait FilterPenugasanGuru
             return $this->penugasanGuru = null;
         }
 
-        $ta = TahunAjaran::where('is_aktif', true)->first();
+        $tahunAjaranId = app(TahunAjaranTerpilih::class)->id();
 
         return $this->penugasanGuru = GuruMapel::where('guru_id', $user->guru_id)
-            ->when($ta, fn ($q) => $q->where('tahun_ajaran_id', $ta->id))
+            ->when($tahunAjaranId, fn ($q) => $q->where('tahun_ajaran_id', $tahunAjaranId))
             ->get(['mata_pelajaran_id', 'rombongan_belajar_id']);
     }
 

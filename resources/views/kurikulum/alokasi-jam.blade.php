@@ -11,7 +11,7 @@
             <i class="bi {{ $isEdit ? 'bi-pencil-square' : 'bi-plus-circle' }} me-2"></i>{{ $isEdit ? 'Edit Alokasi Jam' : 'Tambah Alokasi Jam Baru' }}
         </span>
         @if($tahunAktif)
-        <span class="badge bg-primary">Tahun Ajaran Aktif: {{ $tahunAktif->nama_tahun_ajaran }}</span>
+        <span class="badge bg-primary">Tahun Ajaran: {{ $tahunAktif->nama_tahun_ajaran }}</span>
         @endif
     </div>
     <div class="card-body">

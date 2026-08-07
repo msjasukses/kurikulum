@@ -23,6 +23,9 @@ class JadwalMengajarController extends BaseCrudController
     protected string $routeName = 'kurikulum.jadwal';
     protected string $title = 'Jadwal Mengajar Guru';
 
+    /** Jadwal mengikuti tahun ajaran yang dipilih di topbar. */
+    protected ?string $tahunAjaranColumn = 'tahun_ajaran';
+
     protected function fields(): array
     {
         return [
@@ -32,7 +35,7 @@ class JadwalMengajarController extends BaseCrudController
             ['name' => 'kelas_id', 'label' => 'Kelas', 'type' => 'select', 'rules' => 'required|integer', 'relation' => ['method' => 'kelas', 'model' => \App\Models\Kelas::class, 'display' => 'nama_rombel'] + $this->idsFilter($this->kelasIdsGuru())],
             ['name' => 'jam_mengajar_id', 'label' => 'Jam Mengajar', 'type' => 'select', 'rules' => 'required|integer', 'relation' => ['method' => 'jamMengajar', 'model' => \App\Models\JamMengajar::class, 'display' => 'label', 'orderBy' => 'jam_ke']],
             ['name' => 'ruangan', 'label' => 'Ruangan', 'type' => 'text', 'rules' => 'nullable|string|max:50', 'list' => false],
-            ['name' => 'tahun_ajaran', 'label' => 'Tahun Ajaran', 'type' => 'select', 'rules' => 'nullable|string|max:20', 'optionsFrom' => ['model' => \App\Models\TahunAjaran::class, 'column' => 'nama_tahun_ajaran']],
+            ['name' => 'tahun_ajaran', 'label' => 'Tahun Ajaran', 'type' => 'text', 'auto' => true],
         ];
     }
 }

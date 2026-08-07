@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Crud;
 
 use App\Http\Controllers\Controller;
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +30,40 @@ abstract class BaseCrudController extends Controller
     protected int $perPage = 10;
 
     /**
+     * Kolom penanda tahun ajaran pada model ini. Bila diisi, daftar dan
+     * penyimpanan data otomatis mengikuti tahun ajaran yang dipilih di
+     * dropdown topbar. Dua bentuk yang dipakai di aplikasi ini:
+     *  - 'tahun_ajaran_id' : relasi id ke tabel tahun_ajaran
+     *  - 'tahun_ajaran'    : teks nama tahun ajaran, mis. "2026/2027"
+     */
+    protected ?string $tahunAjaranColumn = null;
+
+    protected function tahunAjaranTerpilih(): TahunAjaranTerpilih
+    {
+        return app(TahunAjaranTerpilih::class);
+    }
+
+    /** Nilai kolom tahun ajaran sesuai pilihan topbar (id atau nama). */
+    protected function nilaiTahunAjaran(): int|string|null
+    {
+        if (! $this->tahunAjaranColumn) {
+            return null;
+        }
+
+        return $this->tahunAjaranColumn === 'tahun_ajaran_id'
+            ? $this->tahunAjaranTerpilih()->id()
+            : $this->tahunAjaranTerpilih()->nama();
+    }
+
+    /** Atribut tahun ajaran yang ikut disimpan saat tambah/ubah data. */
+    protected function tahunAjaranAttribute(): array
+    {
+        $nilai = $this->nilaiTahunAjaran();
+
+        return $nilai === null ? [] : [$this->tahunAjaranColumn => $nilai];
+    }
+
+    /**
      * Apakah user saat ini boleh tambah/ubah/hapus data (bukan hanya lihat).
      * Override di controller turunan bila perlu dibatasi (mis. siswa read-only).
      */
@@ -42,7 +77,20 @@ abstract class BaseCrudController extends Controller
      */
     protected function baseQuery()
     {
-        return ($this->model)::query();
+        $query = ($this->model)::query();
+        $nilai = $this->nilaiTahunAjaran();
+
+        if ($nilai !== null) {
+            $kolom = $this->tahunAjaranColumn;
+
+            // Untuk kolom teks, data lama yang belum diberi tahun ajaran
+            // (mis. hasil import) tetap ditampilkan supaya tidak "hilang".
+            $query->where(fn ($q) => $kolom === 'tahun_ajaran_id'
+                ? $q->where($kolom, $nilai)
+                : $q->where($kolom, $nilai)->orWhereNull($kolom));
+        }
+
+        return $query;
     }
 
     /**
@@ -136,7 +184,11 @@ abstract class BaseCrudController extends Controller
         $fields = $this->fields();
         $validated = $request->validate($this->buildValidationRules($fields, false));
 
-        $data = array_merge($this->extractData($request, $validated, $fields, null), $this->defaultAttributes());
+        $data = array_merge(
+            $this->extractData($request, $validated, $fields, null),
+            $this->tahunAjaranAttribute(),
+            $this->defaultAttributes()
+        );
 
         ($this->model)::create($data);
 
@@ -167,7 +219,11 @@ abstract class BaseCrudController extends Controller
         $fields = $this->fields();
         $validated = $request->validate($this->buildValidationRules($fields, true, $id));
 
-        $data = array_merge($this->extractData($request, $validated, $fields, $item), $this->defaultAttributes());
+        $data = array_merge(
+            $this->extractData($request, $validated, $fields, $item),
+            $this->tahunAjaranAttribute(),
+            $this->defaultAttributes()
+        );
 
         $item->update($data);
 
@@ -196,6 +252,12 @@ abstract class BaseCrudController extends Controller
     protected function resolveFieldOptions(array $fields): array
     {
         foreach ($fields as &$field) {
+            // Field yang nilainya diisi otomatis oleh sistem — untuk saat ini
+            // hanya kolom tahun ajaran, yang mengikuti pilihan di topbar.
+            if (! empty($field['auto']) && $field['name'] === $this->tahunAjaranColumn) {
+                $field['autoValue'] = $this->tahunAjaranTerpilih()->nama();
+            }
+
             if ($field['type'] === 'select' && isset($field['relation'])) {
                 $relModel = $field['relation']['model'];
                 $display = $field['relation']['display'];

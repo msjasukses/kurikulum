@@ -10,7 +10,7 @@ use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\ModulAjar;
 use App\Models\SiswaRombel;
-use App\Models\TahunAjaran;
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -28,7 +28,13 @@ class AgendaMengajarController extends Controller
     {
         $q = trim((string) $request->input('q'));
 
+        $tahunAjaran = app(TahunAjaranTerpilih::class)->nama();
+
         $items = AgendaMengajar::with(['guru', 'kelas', 'mataPelajaran', 'modulAjar'])
+            // Agenda lama yang belum berlabel tahun ajaran tetap ditampilkan.
+            ->when($tahunAjaran, fn ($query) => $query->where(
+                fn ($x) => $x->where('tahun_ajaran', $tahunAjaran)->orWhereNull('tahun_ajaran')
+            ))
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($x) use ($q) {
                     $x->where('materi', 'like', "%{$q}%")
@@ -62,7 +68,7 @@ class AgendaMengajarController extends Controller
         $data = $this->validated($request);
         $data['waktu_pengisian'] = now();
         $data['status'] = AgendaMengajar::STATUS_DITINJAU;
-        $data['tahun_ajaran'] = optional(TahunAjaran::where('is_aktif', true)->first())->nama_tahun_ajaran;
+        $data['tahun_ajaran'] = app(TahunAjaranTerpilih::class)->nama();
         $data['photo'] = $this->simpanPhoto($request);
 
         AgendaMengajar::create($data);
@@ -113,7 +119,7 @@ class AgendaMengajarController extends Controller
     private function formData(): array
     {
         $hariIni = self::HARI[now()->dayOfWeek];
-        $tahunAktif = TahunAjaran::where('is_aktif', true)->first();
+        $tahunAktif = app(TahunAjaranTerpilih::class)->terpilih();
 
         // Jadwal mengajar hari ini — dipakai autofill jam/kelas/mapel di form.
         $jadwalHariIni = JadwalMengajar::with(['guru', 'kelas', 'mataPelajaran', 'jamMengajar'])

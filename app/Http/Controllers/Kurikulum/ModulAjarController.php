@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Models\MataPelajaran;
 use App\Models\ModulAjar;
 use App\Models\PemetaanCpTpAtp;
-use App\Models\TahunAjaran;
 use App\Models\TingkatKelas;
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,11 +24,17 @@ class ModulAjarController extends Controller
 
     public function index(Request $request): View
     {
-        $tahunList = TahunAjaran::orderByDesc('nama_tahun_ajaran')->get();
+        $tahunAjaran = app(TahunAjaranTerpilih::class);
+        $tahunList = $tahunAjaran->daftar();
+        $namaTahun = $tahunAjaran->nama();
 
         // Pemetaan CP-TP-ATP dikirim ke halaman sebagai JSON untuk dropdown
         // bertingkat CP -> TP -> ATP (difilter di sisi klien per mapel+tingkat).
+        // Data lama yang belum berlabel tahun ajaran tetap ikut ditampilkan.
         $pemetaanList = PemetaanCpTpAtp::query()
+            ->when($namaTahun, fn ($q) => $q->where(
+                fn ($x) => $x->where('tahun_ajaran', $namaTahun)->orWhereNull('tahun_ajaran')
+            ))
             ->when($this->mapelIdsGuru() !== null, fn ($q) => $q->whereIn('mata_pelajaran_id', $this->mapelIdsGuru()))
             ->get([
             'id', 'mata_pelajaran_id', 'tingkat_kelas_id',
@@ -46,9 +52,12 @@ class ModulAjarController extends Controller
             'tingkatList' => TingkatKelas::when($tingkatIds !== null, fn ($q) => $q->whereIn('id', $tingkatIds))
                 ->orderBy('urutan')->get(),
             'tahunList' => $tahunList,
-            'tahunAktif' => $tahunList->firstWhere('is_aktif', true),
+            'tahunAktif' => $tahunAjaran->terpilih(),
             'pemetaanJson' => $pemetaanList->toJson(JSON_UNESCAPED_UNICODE),
             'items' => ModulAjar::with(['mataPelajaran', 'tingkatKelas', 'pegawai'])
+                ->when($namaTahun, fn ($q) => $q->where(
+                    fn ($x) => $x->where('tahun_ajaran', $namaTahun)->orWhereNull('tahun_ajaran')
+                ))
                 ->when($mapelIds !== null, fn ($q) => $q->whereIn('mata_pelajaran_id', $mapelIds))
                 ->latest()->get(),
         ]);

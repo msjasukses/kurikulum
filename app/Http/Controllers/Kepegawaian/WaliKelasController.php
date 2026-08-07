@@ -11,6 +11,9 @@ class WaliKelasController extends BaseCrudController
     protected string $routeName = 'kepegawaian.wali-kelas';
     protected string $title = 'Data Wali Kelas';
 
+    /** Penunjukan wali kelas mengikuti tahun ajaran yang dipilih di topbar. */
+    protected ?string $tahunAjaranColumn = 'tahun_ajaran_id';
+
     /**
      * Data bersumber dari database datacenter, jadi menu ini read-only:
      * tidak ada tambah/ubah/hapus dari aplikasi ini.

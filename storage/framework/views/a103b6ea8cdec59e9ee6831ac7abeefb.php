@@ -1,7 +1,13 @@
 <?php $__env->startSection('title', 'Dashboard'); ?>
 <?php $__env->startSection('content'); ?>
 
-<p class="text-muted">Selamat datang, <strong><?php echo e(auth()->user()->name); ?></strong>.</p>
+<p class="text-muted">
+    Selamat datang, <strong><?php echo e(auth()->user()->name); ?></strong>.
+    <?php if($tahunAjaran): ?>
+        Data yang ditampilkan untuk Tahun Ajaran
+        <span class="badge bg-primary"><?php echo e($tahunAjaran); ?></span>
+    <?php endif; ?>
+</p>
 
 <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('admin')): ?>
 <div class="row g-3 mb-4">

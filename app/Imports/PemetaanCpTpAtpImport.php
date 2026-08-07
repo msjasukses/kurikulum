@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Models\MataPelajaran;
 use App\Models\PemetaanCpTpAtp;
 use App\Models\TingkatKelas;
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -95,7 +96,9 @@ class PemetaanCpTpAtpImport implements ToCollection, WithHeadingRow
                     'mata_pelajaran_id' => $mapel->id,
                     'tingkat_kelas_id' => $tingkat->id,
                     'fase' => $fase,
-                    'tahun_ajaran' => $tahunAjaran !== '' ? $tahunAjaran : null,
+                    // Kolom tahun ajaran boleh dikosongkan di file Excel —
+                    // isinya mengikuti tahun ajaran yang dipilih di topbar.
+                    'tahun_ajaran' => $tahunAjaran !== '' ? $tahunAjaran : app(TahunAjaranTerpilih::class)->nama(),
                 ],
                 [
                     'capaian_pembelajaran' => $cp,

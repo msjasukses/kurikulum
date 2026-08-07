@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AbsensiSiswa;
 use App\Models\Kelas;
 use App\Models\Siswa;
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -13,7 +14,11 @@ class RekapKelasController extends Controller
 {
     public function index(Request $request): View
     {
-        $kelasList = Kelas::orderBy('nama_rombel')->get();
+        // Daftar kelas mengikuti tahun ajaran yang dipilih di topbar.
+        $tahunAjaranId = app(TahunAjaranTerpilih::class)->id();
+
+        $kelasList = Kelas::when($tahunAjaranId, fn ($q) => $q->where('tahun_ajaran_id', $tahunAjaranId))
+            ->orderBy('nama_rombel')->get();
         $kelasId = $request->input('kelas_id');
         $tanggalMulai = $request->input('tanggal_mulai');
         $tanggalSelesai = $request->input('tanggal_selesai');

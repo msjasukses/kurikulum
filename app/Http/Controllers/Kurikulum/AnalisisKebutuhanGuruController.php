@@ -8,8 +8,8 @@ use App\Models\AlokasiJamMapel;
 use App\Models\Guru;
 use App\Models\IdentitasSekolah;
 use App\Models\MataPelajaran;
-use App\Models\TahunAjaran;
 use App\Models\TingkatKelas;
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -46,10 +46,10 @@ class AnalisisKebutuhanGuruController extends Controller
         $beban = max(1, (int) $request->input('beban', self::JAM_WAJIB_PER_GURU));
 
         $identitas = IdentitasSekolah::first();
-        $tahunAktif = TahunAjaran::where('is_aktif', true)->first();
+        $tahunAktif = app(TahunAjaranTerpilih::class)->terpilih();
         $tingkatList = TingkatKelas::orderBy('urutan')->get();
 
-        // Alokasi tahun ajaran aktif. Bila satu mapel+tingkat punya alokasi di
+        // Alokasi tahun ajaran terpilih. Bila satu mapel+tingkat punya alokasi di
         // dua semester, diambil total terbesar (beban mingguan berjalan),
         // bukan dijumlahkan, supaya tidak terhitung ganda.
         $alokasi = AlokasiJamMapel::query()

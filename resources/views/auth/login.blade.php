@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masuk - {{ config('app.name') }}</title>
+    <title>Masuk - {{ $namaSekolah }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
@@ -15,7 +15,8 @@
     <div class="card login-card shadow-lg p-4">
         <div class="text-center mb-3">
             <i class="bi bi-mortarboard-fill" style="font-size:2.5rem;color:#2c3e50;"></i>
-            <h5 class="mt-2 mb-0">{{ config('app.name') }}</h5>
+            <h5 class="mt-2 mb-1">{{ $namaSekolah }}</h5>
+            <div class="text-muted small">{{ config('app.name') }}</div>
             <small class="text-muted">Silakan masuk untuk melanjutkan</small>
         </div>
 

@@ -49,7 +49,7 @@
         <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('admin')): ?>
         <?php ($open = request()->routeIs('setting.*')); ?>
         <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center <?php echo e($open ? '' : 'collapsed'); ?>" data-bs-toggle="collapse" data-bs-target="#grpSetting">
-            <i class="bi bi-gear me-2"></i>Setting Sekolah <i class="bi bi-chevron-down ms-auto chev"></i>
+            <i class="bi bi-gear me-2"></i>Master Data <i class="bi bi-chevron-down ms-auto chev"></i>
         </button>
         <div class="collapse menu-sub <?php echo e($open ? 'show' : ''); ?>" id="grpSetting" data-bs-parent="#sidebarNav">
             <a class="nav-link px-3 py-2 <?php echo e(request()->routeIs('setting.identitas*') ? 'active':''); ?>" href="<?php echo e(route('setting.identitas.edit')); ?>"><i class="bi bi-building me-2"></i>Identitas Sekolah</a>
@@ -142,6 +142,11 @@
             <a class="nav-link px-3 py-2 <?php echo e(request()->routeIs('users.guru*') ? 'active':''); ?>" href="<?php echo e(route('users.guru.index')); ?>"><i class="bi bi-person-workspace me-2"></i>User Guru</a>
         </div>
         <?php endif; ?>
+
+        <div class="menu-group-title">Akun</div>
+        <a class="nav-link px-3 py-2 <?php echo e(request()->routeIs('profil.*') ? 'active' : ''); ?>" href="<?php echo e(route('profil.edit')); ?>">
+            <i class="bi bi-person-gear me-2"></i> Setting Profil
+        </a>
     </nav>
 </div>
 
@@ -153,6 +158,36 @@
             <i class="bi bi-list"></i>
         </button>
         <div></div>
+        <div class="d-flex align-items-center gap-2">
+        <?php if($tahunAjaranTerpilih->daftar()->isNotEmpty()): ?>
+        <div class="dropdown">
+            <button class="btn btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-calendar-range me-1"></i>
+                <span class="d-none d-sm-inline">T.A. </span><?php echo e($tahunAjaranTerpilih->nama()); ?>
+
+                <?php if($tahunAjaranTerpilih->samaDenganAktif()): ?>
+                    <span class="text-muted small d-none d-md-inline">(aktif)</span>
+                <?php endif; ?>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">Pilih Tahun Ajaran</h6></li>
+                <?php $__currentLoopData = $tahunAjaranTerpilih->daftar(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ta): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <li>
+                    <form action="<?php echo e(route('tahun-ajaran.pilih')); ?>" method="POST">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="tahun_ajaran_id" value="<?php echo e($ta->id); ?>">
+                        <button type="submit" class="dropdown-item d-flex align-items-center justify-content-between <?php echo e($ta->id === $tahunAjaranTerpilih->id() ? 'active' : ''); ?>">
+                            <span><?php echo e($ta->nama_tahun_ajaran); ?></span>
+                            <?php if($ta->is_aktif): ?>
+                                <span class="badge bg-success ms-2">aktif</span>
+                            <?php endif; ?>
+                        </button>
+                    </form>
+                </li>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </ul>
+        </div>
+        <?php endif; ?>
         <div class="dropdown">
             <button class="btn btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 <i class="bi bi-person-circle me-1"></i> <?php echo e(auth()->user()->name); ?>
@@ -161,12 +196,17 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li>
+                    <a class="dropdown-item" href="<?php echo e(route('profil.edit')); ?>"><i class="bi bi-person-gear me-2"></i>Setting Profil</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
                     <form action="<?php echo e(route('logout')); ?>" method="POST">
                         <?php echo csrf_field(); ?>
                         <button class="dropdown-item" type="submit"><i class="bi bi-box-arrow-right me-2"></i>Keluar</button>
                     </form>
                 </li>
             </ul>
+        </div>
         </div>
     </div>
 

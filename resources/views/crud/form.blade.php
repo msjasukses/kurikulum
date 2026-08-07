@@ -20,7 +20,12 @@
                 <div class="mb-3">
                     <label class="form-label">{{ $field['label'] }}</label>
 
-                    @if($field['type'] === 'textarea')
+                    @if(!empty($field['auto']))
+                        {{-- Nilai diisi otomatis oleh sistem, jadi tidak ikut dikirim dari form. --}}
+                        <input type="text" class="form-control" value="{{ $field['autoValue'] ?? $old }}" disabled>
+                        <div class="form-text">Mengikuti tahun ajaran yang dipilih di kanan atas halaman.</div>
+
+                    @elseif($field['type'] === 'textarea')
                         <textarea name="{{ $name }}" rows="3" class="form-control @error($name) is-invalid @enderror" placeholder="{{ $field['placeholder'] ?? '' }}">{{ $old }}</textarea>
 
                     @elseif($field['type'] === 'select')

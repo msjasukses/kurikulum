@@ -2,14 +2,18 @@
 
 namespace App\Providers;
 
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Satu instance per request supaya daftar tahun ajaran hanya
+        // di-query sekali walau dipakai di banyak controller & view.
+        $this->app->singleton(TahunAjaranTerpilih::class);
     }
 
     public function boot(): void
@@ -17,5 +21,10 @@ class AppServiceProvider extends ServiceProvider
         // Layout aplikasi memakai Bootstrap 5, jadi paginator harus
         // memakai template Bootstrap juga (default Laravel: Tailwind).
         Paginator::useBootstrapFive();
+
+        // Dropdown tahun ajaran di topbar tersedia di seluruh halaman.
+        View::composer('layouts.app', function ($view) {
+            $view->with('tahunAjaranTerpilih', app(TahunAjaranTerpilih::class));
+        });
     }
 }

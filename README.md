@@ -2,7 +2,7 @@
 
 Aplikasi manajemen sekolah berbasis Laravel 10, mencakup:
 
-1. **Setting Sekolah** - Identitas Sekolah, Jam Mengajar, Mata Pelajaran, Jenis Eskul, Tingkat Kelas, Jurusan, Kelas/Rombel
+1. **Master Data** - Identitas Sekolah, Jam Mengajar, Mata Pelajaran, Jenis Eskul, Tingkat Kelas, Jurusan, Kelas/Rombel
 2. **Kepegawaian** - Data Pegawai, Data Wali Kelas, Data Guru Mata Pelajaran
 3. **Kesiswaan** - Data Siswa, Data Orang Tua
 4. **Kurikulum** - Jadwal Mengajar Guru, Pemetaan CP-TP-ATP, Alokasi Jam Mapel, Modul Ajar Digital, Analisis Kebutuhan Guru
@@ -59,7 +59,7 @@ Project ini berisi kode aplikasi lengkap (migration, model, controller, view, ro
 
 Agar dropdown-dropdown terisi dengan benar, disarankan mengisi data dengan urutan berikut:
 
-1. Setting Sekolah: Tingkat Kelas, Jurusan, Kelas/Rombel, Mata Pelajaran, Jam Mengajar
+1. Master Data: Tingkat Kelas, Jurusan, Kelas/Rombel, Mata Pelajaran, Jam Mengajar
 2. Kepegawaian: Data Pegawai, baru kemudian Data Wali Kelas & Data Guru Mata Pelajaran
 3. Kesiswaan: Data Siswa (perlu Kelas), baru Data Orang Tua
 4. Kurikulum & Ruang Belajar: menyusul setelah data pegawai, siswa, kelas, dan mapel tersedia

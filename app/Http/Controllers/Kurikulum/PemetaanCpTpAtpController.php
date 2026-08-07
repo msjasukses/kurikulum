@@ -27,6 +27,9 @@ class PemetaanCpTpAtpController extends BaseCrudController
     protected string $routeName = 'kurikulum.cp-tp-atp';
     protected string $title = 'Pemetaan CP-TP-ATP';
 
+    /** Pemetaan mengikuti tahun ajaran yang dipilih di topbar. */
+    protected ?string $tahunAjaranColumn = 'tahun_ajaran';
+
     protected function extraActions(): array
     {
         return [
@@ -106,7 +109,7 @@ class PemetaanCpTpAtpController extends BaseCrudController
             ['name' => 'capaian_pembelajaran', 'label' => 'Capaian Pembelajaran (CP)', 'type' => 'textarea', 'rules' => 'required|string'],
             ['name' => 'tujuan_pembelajaran', 'label' => 'Tujuan Pembelajaran (TP)', 'type' => 'textarea', 'rules' => 'required|string'],
             ['name' => 'alur_tujuan_pembelajaran', 'label' => 'Alur Tujuan Pembelajaran (ATP)', 'type' => 'textarea', 'rules' => 'required|string'],
-            ['name' => 'tahun_ajaran', 'label' => 'Tahun Ajaran', 'type' => 'select', 'rules' => 'nullable|string|max:20', 'optionsFrom' => ['model' => \App\Models\TahunAjaran::class, 'column' => 'nama_tahun_ajaran']],
+            ['name' => 'tahun_ajaran', 'label' => 'Tahun Ajaran', 'type' => 'text', 'auto' => true],
         ];
     }
 }

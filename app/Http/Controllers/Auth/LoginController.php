@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guru;
+use App\Models\IdentitasSekolah;
 use App\Models\Siswa;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
@@ -17,7 +18,11 @@ class LoginController extends Controller
 {
     public function create(): View
     {
-        return view('auth.login');
+        // Nama sekolah diambil dari Master Data > Identitas Sekolah; bila
+        // belum diisi, pakai nama aplikasi sebagai cadangan.
+        $namaSekolah = IdentitasSekolah::value('nama_sekolah') ?: config('app.name');
+
+        return view('auth.login', compact('namaSekolah'));
     }
 
     public function store(Request $request): RedirectResponse

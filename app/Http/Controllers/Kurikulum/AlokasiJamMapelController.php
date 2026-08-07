@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AlokasiJamMapel;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
-use App\Models\TahunAjaran;
 use App\Models\TingkatKelas;
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,8 +22,9 @@ class AlokasiJamMapelController extends Controller
 {
     public function index(Request $request): View
     {
-        $tahunList = TahunAjaran::orderByDesc('nama_tahun_ajaran')->get();
-        $tahunAktif = $tahunList->firstWhere('is_aktif', true);
+        $tahunAjaran = app(TahunAjaranTerpilih::class);
+        $tahunList = $tahunAjaran->daftar();
+        $tahunAktif = $tahunAjaran->terpilih();
 
         $tingkatList = TingkatKelas::orderBy('urutan')->get();
         $mapelList = MataPelajaran::orderBy('nama_mapel')->get();
@@ -32,14 +33,15 @@ class AlokasiJamMapelController extends Controller
         // berisi angka yang berkorespondensi dengan tingkat_kelas.nomor),
         // dipakai untuk mengisi otomatis kolom "Jumlah Kelas" di form.
         $jumlahKelasPerTingkat = Kelas::selectRaw('tingkat, count(*) as jumlah')
+            ->when($tahunAjaran->id(), fn ($q) => $q->where('tahun_ajaran_id', $tahunAjaran->id()))
             ->groupBy('tingkat')
             ->pluck('jumlah', 'tingkat');
         $tingkatList->each(function ($t) use ($jumlahKelasPerTingkat) {
             $t->jumlah_rombel = (int) ($jumlahKelasPerTingkat[$t->nomor] ?? 0);
         });
 
-        // Filter daftar; default tahun mengikuti tahun ajaran aktif.
-        $filterTahun = $request->input('tahun', optional($tahunAktif)->nama_tahun_ajaran);
+        // Filter daftar; default tahun mengikuti pilihan tahun ajaran di topbar.
+        $filterTahun = $request->input('tahun', $tahunAjaran->nama());
         $filterSemester = $request->input('semester', '');
         $filterTingkat = $request->input('tingkat', '');
 

@@ -2,7 +2,13 @@
 @section('title', 'Dashboard')
 @section('content')
 
-<p class="text-muted">Selamat datang, <strong>{{ auth()->user()->name }}</strong>.</p>
+<p class="text-muted">
+    Selamat datang, <strong>{{ auth()->user()->name }}</strong>.
+    @if($tahunAjaran)
+        Data yang ditampilkan untuk Tahun Ajaran
+        <span class="badge bg-primary">{{ $tahunAjaran }}</span>
+    @endif
+</p>
 
 @can('admin')
 <div class="row g-3 mb-4">

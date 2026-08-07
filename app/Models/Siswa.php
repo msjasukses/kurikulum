@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\TahunAjaranTerpilih;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -47,11 +48,20 @@ class Siswa extends Model
     ];
 
     /**
-     * Baris siswa_rombel dengan tahun_ajaran_id terbesar (asumsi: tahun
-     * ajaran terbaru = penempatan kelas paling mutakhir untuk siswa ini).
+     * Penempatan kelas siswa pada tahun ajaran yang sedang dipilih di
+     * topbar (satu baris siswa_rombel per tahun ajaran). Bila daftar tahun
+     * ajaran tidak tersedia, dipakai penempatan dengan tahun_ajaran_id
+     * terbesar — yaitu yang paling mutakhir.
      */
     public function rombelSaatIni()
     {
+        $tahunAjaranId = app(TahunAjaranTerpilih::class)->id();
+
+        if ($tahunAjaranId) {
+            return $this->hasOne(SiswaRombel::class, 'siswa_id')
+                ->where('tahun_ajaran_id', $tahunAjaranId);
+        }
+
         return $this->hasOne(SiswaRombel::class, 'siswa_id')->latestOfMany('tahun_ajaran_id');
     }
 }

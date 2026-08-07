@@ -17,6 +17,8 @@ use App\Http\Controllers\Kurikulum\JadwalMengajarController;
 use App\Http\Controllers\Kurikulum\ModulAjarController;
 use App\Http\Controllers\Kurikulum\PemetaanCpTpAtpController;
 use App\Http\Controllers\Kurikulum\PemetaanCpTpAtpImportController;
+use App\Http\Controllers\PilihTahunAjaranController;
+use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RuangBelajar\MateriOnlineController;
 use App\Http\Controllers\RuangBelajar\TugasController;
 use App\Http\Controllers\Setting\IdentitasSekolahController;
@@ -43,7 +45,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // ================= Setting Sekolah (admin) =================
+    // Penukar tahun ajaran (dropdown topbar) — semua role, hanya mengubah
+    // sudut pandang data, bukan hak akses.
+    Route::post('/tahun-ajaran/pilih', [PilihTahunAjaranController::class, 'store'])->name('tahun-ajaran.pilih');
+
+    // ================= Setting Profil (semua role, hanya data sendiri) =================
+    Route::get('/profil', [ProfilController::class, 'edit'])->name('profil.edit');
+    Route::put('/profil', [ProfilController::class, 'update'])->name('profil.update');
+    Route::put('/profil/password', [ProfilController::class, 'updatePassword'])->name('profil.password');
+
+    // ================= Master Data (admin) =================
     Route::middleware('role:admin')->prefix('setting')->name('setting.')->group(function () {
         Route::get('identitas', [IdentitasSekolahController::class, 'edit'])->name('identitas.edit');
         Route::put('identitas', [IdentitasSekolahController::class, 'update'])->name('identitas.update');

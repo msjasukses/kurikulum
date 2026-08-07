@@ -11,6 +11,9 @@ class GuruMapelController extends BaseCrudController
     protected string $routeName = 'kepegawaian.guru-mapel';
     protected string $title = 'Data Guru Mata Pelajaran';
 
+    /** Penugasan mengajar mengikuti tahun ajaran yang dipilih di topbar. */
+    protected ?string $tahunAjaranColumn = 'tahun_ajaran_id';
+
     /**
      * Data bersumber dari database datacenter (lihat App\Models\GuruMapel),
      * jadi menu ini read-only: tidak ada tambah/ubah/hapus dari aplikasi ini.

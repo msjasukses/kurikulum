@@ -49,7 +49,7 @@
         @can('admin')
         @php($open = request()->routeIs('setting.*'))
         <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpSetting">
-            <i class="bi bi-gear me-2"></i>Setting Sekolah <i class="bi bi-chevron-down ms-auto chev"></i>
+            <i class="bi bi-gear me-2"></i>Master Data <i class="bi bi-chevron-down ms-auto chev"></i>
         </button>
         <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpSetting" data-bs-parent="#sidebarNav">
             <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.identitas*') ? 'active':'' }}" href="{{ route('setting.identitas.edit') }}"><i class="bi bi-building me-2"></i>Identitas Sekolah</a>
@@ -142,6 +142,11 @@
             <a class="nav-link px-3 py-2 {{ request()->routeIs('users.guru*') ? 'active':'' }}" href="{{ route('users.guru.index') }}"><i class="bi bi-person-workspace me-2"></i>User Guru</a>
         </div>
         @endcan
+
+        <div class="menu-group-title">Akun</div>
+        <a class="nav-link px-3 py-2 {{ request()->routeIs('profil.*') ? 'active' : '' }}" href="{{ route('profil.edit') }}">
+            <i class="bi bi-person-gear me-2"></i> Setting Profil
+        </a>
     </nav>
 </div>
 
@@ -153,6 +158,35 @@
             <i class="bi bi-list"></i>
         </button>
         <div></div>
+        <div class="d-flex align-items-center gap-2">
+        @if($tahunAjaranTerpilih->daftar()->isNotEmpty())
+        <div class="dropdown">
+            <button class="btn btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-calendar-range me-1"></i>
+                <span class="d-none d-sm-inline">T.A. </span>{{ $tahunAjaranTerpilih->nama() }}
+                @if($tahunAjaranTerpilih->samaDenganAktif())
+                    <span class="text-muted small d-none d-md-inline">(aktif)</span>
+                @endif
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">Pilih Tahun Ajaran</h6></li>
+                @foreach($tahunAjaranTerpilih->daftar() as $ta)
+                <li>
+                    <form action="{{ route('tahun-ajaran.pilih') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="tahun_ajaran_id" value="{{ $ta->id }}">
+                        <button type="submit" class="dropdown-item d-flex align-items-center justify-content-between {{ $ta->id === $tahunAjaranTerpilih->id() ? 'active' : '' }}">
+                            <span>{{ $ta->nama_tahun_ajaran }}</span>
+                            @if($ta->is_aktif)
+                                <span class="badge bg-success ms-2">aktif</span>
+                            @endif
+                        </button>
+                    </form>
+                </li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
         <div class="dropdown">
             <button class="btn btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 <i class="bi bi-person-circle me-1"></i> {{ auth()->user()->name }}
@@ -160,12 +194,17 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li>
+                    <a class="dropdown-item" href="{{ route('profil.edit') }}"><i class="bi bi-person-gear me-2"></i>Setting Profil</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf
                         <button class="dropdown-item" type="submit"><i class="bi bi-box-arrow-right me-2"></i>Keluar</button>
                     </form>
                 </li>
             </ul>
+        </div>
         </div>
     </div>
 

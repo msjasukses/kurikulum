@@ -39,8 +39,14 @@
                 <div class="form-text">Guru/Siswa: masuk memakai NIP/NISN dan password yang sama dengan aplikasi Data Center.</div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Kata Sandi</label>
-                <input type="password" name="password" class="form-control" required>
+                <label class="form-label" for="password">Kata Sandi</label>
+                <div class="input-group">
+                    <input type="password" name="password" id="password" class="form-control" required>
+                    <button type="button" class="btn btn-outline-secondary" id="lihat-sandi"
+                            aria-label="Tampilkan kata sandi" aria-pressed="false" title="Tampilkan kata sandi">
+                        <i class="bi bi-eye" id="ikon-sandi"></i>
+                    </button>
+                </div>
             </div>
             <div class="form-check mb-3">
                 <input type="checkbox" name="remember" class="form-check-input" id="remember">
@@ -49,5 +55,25 @@
             <button type="submit" class="btn btn-dark w-100">Masuk</button>
         </form>
     </div>
+
+    <script>
+        // Tombol mata: tampilkan/sembunyikan kata sandi yang sedang diketik.
+        (function () {
+            var tombol = document.getElementById('lihat-sandi');
+            var sandi = document.getElementById('password');
+            var ikon = document.getElementById('ikon-sandi');
+
+            tombol.addEventListener('click', function () {
+                var tampil = sandi.type === 'password';
+                sandi.type = tampil ? 'text' : 'password';
+                ikon.classList.toggle('bi-eye', !tampil);
+                ikon.classList.toggle('bi-eye-slash', tampil);
+                tombol.setAttribute('aria-pressed', tampil ? 'true' : 'false');
+                tombol.setAttribute('aria-label', tampil ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
+                tombol.setAttribute('title', tombol.getAttribute('aria-label'));
+                sandi.focus();
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -116,6 +116,40 @@ abstract class BaseCrudController extends Controller
         return [];
     }
 
+    /**
+     * Dropdown filter di halaman index, di samping kotak pencarian.
+     * Setiap item: [
+     *   'name'    => nama parameter query (default juga jadi nama kolom),
+     *   'label'   => teks pilihan kosong, mis. "Semua Mata Pelajaran",
+     *   'options' => [nilai => label],
+     *   'column'  => (opsional) nama kolom bila berbeda dari 'name',
+     * ].
+     */
+    protected function filters(): array
+    {
+        return [];
+    }
+
+    /** Terapkan filter yang sedang aktif (dari query string) ke query. */
+    protected function applyFilters($query)
+    {
+        foreach ($this->filters() as $filter) {
+            $nilai = request()->input($filter['name']);
+
+            if ($nilai !== null && $nilai !== '') {
+                $query->where($filter['column'] ?? $filter['name'], $nilai);
+            }
+        }
+
+        return $query;
+    }
+
+    /** Parameter yang perlu ikut dibawa ke link lain, mis. tombol cetak. */
+    protected function filterQuery(): array
+    {
+        return request()->only(array_merge(['q'], array_column($this->filters(), 'name')));
+    }
+
     protected function relationsToLoad(): array
     {
         return collect($this->fields())
@@ -137,6 +171,8 @@ abstract class BaseCrudController extends Controller
         if (! empty($this->relationsToLoad())) {
             $query->with($this->relationsToLoad());
         }
+
+        $this->applyFilters($query);
 
         if ($request->filled('q')) {
             $keyword = $request->input('q');
@@ -161,6 +197,7 @@ abstract class BaseCrudController extends Controller
             'q' => $request->input('q'),
             'canManage' => $this->canManage(),
             'extraActions' => $this->extraActions(),
+            'filters' => $this->filters(),
         ]);
     }
 
@@ -203,7 +240,7 @@ abstract class BaseCrudController extends Controller
         $item = $this->baseQuery()->findOrFail($id);
 
         return view('crud.form', [
-            'fields' => $this->resolveFieldOptions($this->fields()),
+            'fields' => $this->resolveFieldOptions($this->fields(), $item),
             'title' => $this->title,
             'routeName' => $this->routeName,
             'item' => $item,
@@ -249,7 +286,19 @@ abstract class BaseCrudController extends Controller
             ->with('success', $this->title.' berhasil dihapus.');
     }
 
-    protected function resolveFieldOptions(array $fields): array
+    /**
+     * Filter tahun ajaran untuk relasi yang punya kolom 'tahun_ajaran_id',
+     * mis. pilihan Kelas/Rombel. Dipakai seperti idsFilter():
+     * 'relation' => [...] + $this->filterTahunAjaranId().
+     */
+    protected function filterTahunAjaranId(): array
+    {
+        $id = $this->tahunAjaranTerpilih()->id();
+
+        return $id ? ['where' => ['tahun_ajaran_id' => $id]] : [];
+    }
+
+    protected function resolveFieldOptions(array $fields, $item = null): array
     {
         foreach ($fields as &$field) {
             // Field yang nilainya diisi otomatis oleh sistem — untuk saat ini
@@ -267,17 +316,37 @@ abstract class BaseCrudController extends Controller
                 // Attribute::make()), bukan hanya kolom asli di tabel.
                 // 'ids' (opsional) membatasi pilihan ke id tertentu, mis.
                 // mapel/kelas sesuai penugasan guru yang sedang login.
+                // 'where' (opsional) menambah kondisi, mis. kelas hanya untuk
+                // tahun ajaran yang dipilih di topbar.
                 $field['options'] = ($relModel)::orderBy($orderBy)
                     ->when(isset($field['relation']['ids']), fn ($q) => $q->whereIn('id', $field['relation']['ids']))
+                    ->when(! empty($field['relation']['where']), fn ($q) => $q->where($field['relation']['where']))
                     ->get()->pluck($display, 'id')->all();
+
+                // Nilai yang sudah tersimpan tetap muncul walau di luar filter
+                // (mis. mengubah data lama dari tahun ajaran sebelumnya),
+                // supaya tidak ikut terhapus saat data disimpan ulang.
+                $tersimpan = $item?->{$field['name']};
+                if ($tersimpan && ! array_key_exists($tersimpan, $field['options'])) {
+                    $lama = ($relModel)::find($tersimpan);
+                    if ($lama) {
+                        $field['options'][$tersimpan] = $lama->{$display};
+                    }
+                }
             }
 
             // Untuk field yang menyimpan teks langsung (bukan id relasi), tapi pilihannya
-            // diambil dinamis dari tabel master lain, mis. kolom tahun_ajaran (string).
-            if ($field['type'] === 'select' && isset($field['optionsFrom'])) {
+            // diambil dinamis dari tabel master lain, mis. kolom tahun_ajaran (string)
+            // atau daftar checkbox Model Pembelajaran / Sumber Belajar.
+            // Kunci opsional: 'orderBy' (default = kolom nilai), 'dir' (default 'desc'),
+            // dan 'where' (array kondisi, mis. ['is_aktif' => 1]).
+            if (in_array($field['type'], ['select', 'checkboxes'], true) && isset($field['optionsFrom'])) {
                 $srcModel = $field['optionsFrom']['model'];
                 $column = $field['optionsFrom']['column'];
-                $field['options'] = ($srcModel)::orderBy($column, 'desc')->pluck($column, $column)->all();
+                $field['options'] = ($srcModel)::query()
+                    ->when(isset($field['optionsFrom']['where']), fn ($q) => $q->where($field['optionsFrom']['where']))
+                    ->orderBy($field['optionsFrom']['orderBy'] ?? $column, $field['optionsFrom']['dir'] ?? 'desc')
+                    ->pluck($column, $column)->all();
             }
         }
 
@@ -322,6 +391,12 @@ abstract class BaseCrudController extends Controller
             }
 
             $rules[$field['name']] = $final;
+
+            // Field pilihan ganda dikirim sebagai array, jadi tiap isinya
+            // divalidasi terpisah.
+            if ($field['type'] === 'checkboxes') {
+                $rules[$field['name'].'.*'] = $field['itemRules'] ?? 'string|max:255';
+            }
         }
 
         return $rules;
@@ -353,6 +428,23 @@ abstract class BaseCrudController extends Controller
 
             if ($field['type'] === 'checkbox') {
                 $data[$name] = $request->boolean($name);
+                continue;
+            }
+
+            // Textarea dengan editor teks kaya: HTML-nya disaring dulu.
+            if (! empty($field['editor'])) {
+                $data[$name] = \App\Support\TeksKaya::bersihkan($validated[$name] ?? null);
+                continue;
+            }
+
+            // Pilihan ganda: bila tidak ada satu pun yang dicentang, browser
+            // tidak mengirim key-nya sama sekali sehingga isinya jadi array kosong.
+            if ($field['type'] === 'checkboxes') {
+                $dipilih = array_values(array_filter(
+                    (array) ($validated[$name] ?? []),
+                    fn ($v) => $v !== null && $v !== ''
+                ));
+                $data[$name] = $dipilih;
                 continue;
             }
 

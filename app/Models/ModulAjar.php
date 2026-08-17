@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\TeksKaya;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -66,6 +67,18 @@ class ModulAjar extends Model
         'lkpd_refleksi',
         'lkpd_asesmen',
     ];
+
+    /** Bersihkan HTML dari editor sebelum disimpan. */
+    public static function bersihkanHtml(?string $nilai): ?string
+    {
+        return TeksKaya::bersihkan($nilai);
+    }
+
+    /** Isi bagian modul siap tampil (lihat App\Support\TeksKaya). */
+    public static function htmlIsi(?string $nilai): string
+    {
+        return TeksKaya::html($nilai);
+    }
 
     public function mataPelajaran()
     {

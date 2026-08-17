@@ -108,7 +108,7 @@
                     @continue($name === 'kegiatan_pembelajaran')
                     <div class="col-12">
                         <label class="form-label">{{ $label }}</label>
-                        <textarea name="{{ $name }}" id="{{ $name }}" class="form-control" rows="4">{{ old($name) }}</textarea>
+                        <textarea name="{{ $name }}" id="{{ $name }}" class="form-control editor-html" rows="4">{{ old($name) }}</textarea>
                     </div>
                 @endforeach
 
@@ -116,7 +116,7 @@
                 @foreach(App\Models\ModulAjar::BAGIAN_LKPD as $name => $label)
                     <div class="col-12">
                         <label class="form-label">LKPD - {{ $label }}</label>
-                        <textarea name="{{ $name }}" id="{{ $name }}" class="form-control" rows="4">{{ old($name) }}</textarea>
+                        <textarea name="{{ $name }}" id="{{ $name }}" class="form-control editor-html" rows="4">{{ old($name) }}</textarea>
                     </div>
                 @endforeach
 
@@ -182,9 +182,37 @@
 </div>
 
 @push('scripts')
+@include('partials.tinymce')
 <script>
     // Data Pemetaan CP-TP-ATP untuk dropdown bertingkat CP -> TP -> ATP.
     var PEMETAAN = {!! $pemetaanJson !!};
+
+    // ============ Bantu baca/tulis isi textarea (TinyMCE atau polos) ============
+    function editor(id) {
+        return (window.tinymce && tinymce.get(id)) || null;
+    }
+
+    function ambilIsi(id) {
+        var ed = editor(id);
+        return ed ? ed.getContent({ format: 'text' }) : ($('#' + id).val() || '');
+    }
+
+    function tulisIsi(id, teks) {
+        var ed = editor(id);
+        if (ed) {
+            ed.setContent(keHtml(teks));
+        } else {
+            $('#' + id).val(teks);
+        }
+    }
+
+    /** Teks hasil generate (per baris) diubah jadi paragraf HTML untuk editor. */
+    function keHtml(teks) {
+        return (teks || '').split('\n').map(function (baris) {
+            var aman = baris.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return '<p>' + (aman.trim() === '' ? '&nbsp;' : aman) + '</p>';
+        }).join('');
+    }
 
     function potong(teks, batas) {
         teks = (teks || '').replace(/\s+/g, ' ').trim();
@@ -325,11 +353,11 @@
                 '3. (Soal penalaran/HOTS)'
         };
 
-        var adaIsi = Object.keys(isi).some(function (k) { return $('#' + k).val().trim() !== ''; });
+        var adaIsi = Object.keys(isi).some(function (k) { return ambilIsi(k).trim() !== ''; });
         if (adaIsi && !confirm('Beberapa bagian sudah terisi. Timpa dengan hasil generate?')) {
             return;
         }
-        Object.keys(isi).forEach(function (k) { $('#' + k).val(isi[k]); });
+        Object.keys(isi).forEach(function (k) { tulisIsi(k, isi[k]); });
     }
 
     $(function () {

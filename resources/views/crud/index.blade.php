@@ -3,9 +3,23 @@
 @section('content')
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center justify-content-between">
-        <form class="d-flex gap-2" method="GET">
-            <input type="text" name="q" value="{{ $q }}" class="form-control form-control-sm" placeholder="Cari...">
+        @php
+            $filterAktif = collect($filters ?? [])->contains(fn ($f) => request()->filled($f['name']));
+        @endphp
+        <form class="d-flex flex-wrap gap-2 align-items-center" method="GET">
+            <input type="text" name="q" value="{{ $q }}" class="form-control form-control-sm" style="max-width:180px;" placeholder="Cari...">
+            @foreach($filters ?? [] as $filter)
+                <select name="{{ $filter['name'] }}" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                    <option value="">{{ $filter['label'] }}</option>
+                    @foreach(($filter['options'] ?? []) as $value => $label)
+                        <option value="{{ $value }}" @selected((string) request($filter['name']) === (string) $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            @endforeach
             <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+            @if($q || $filterAktif)
+                <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-secondary" title="Reset filter"><i class="bi bi-x-lg"></i></a>
+            @endif
         </form>
         <div class="d-flex gap-2">
             @if($canManage)
@@ -41,16 +55,22 @@
                             @if($field['list'] ?? true)
                                 <td>
                                     @php
+                                        $raw = $item->{$field['name']};
                                         $val = isset($field['relation'])
                                             ? data_get($item, $field['relation']['method'].'.'.$field['relation']['display'])
-                                            : (isset($field['options']) ? ($field['options'][$item->{$field['name']}] ?? $item->{$field['name']}) : $item->{$field['name']});
+                                            : ((isset($field['options']) && is_scalar($raw)) ? ($field['options'][$raw] ?? $raw) : $raw);
                                     @endphp
                                     @if($field['type'] === 'file' && $item->{$field['name']})
                                         <a href="{{ Storage::url($item->{$field['name']}) }}" target="_blank">Lihat File</a>
                                     @elseif($field['type'] === 'checkbox')
                                         {{ $item->{$field['name']} ? 'Ya' : 'Tidak' }}
+                                    @elseif($field['type'] === 'checkboxes')
+                                        {{ Illuminate\Support\Str::limit(implode(', ', (array) $item->{$field['name']}), 60) ?: '-' }}
+                                    @elseif($field['type'] === 'textarea')
+                                        {{-- Isian editor tersimpan sebagai HTML; di daftar cukup teks polosnya. --}}
+                                        {{ Illuminate\Support\Str::limit(App\Support\TeksKaya::polos($val), 60) }}
                                     @else
-                                        {{ Illuminate\Support\Str::limit($val, 60) }}
+                                        {{ Illuminate\Support\Str::limit((string) $val, 60) }}
                                     @endif
                                 </td>
                             @endif

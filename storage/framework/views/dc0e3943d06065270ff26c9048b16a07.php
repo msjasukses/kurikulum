@@ -2,9 +2,23 @@
 <?php $__env->startSection('content'); ?>
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center justify-content-between">
-        <form class="d-flex gap-2" method="GET">
-            <input type="text" name="q" value="<?php echo e($q); ?>" class="form-control form-control-sm" placeholder="Cari...">
+        <?php
+            $filterAktif = collect($filters ?? [])->contains(fn ($f) => request()->filled($f['name']));
+        ?>
+        <form class="d-flex flex-wrap gap-2 align-items-center" method="GET">
+            <input type="text" name="q" value="<?php echo e($q); ?>" class="form-control form-control-sm" style="max-width:180px;" placeholder="Cari...">
+            <?php $__currentLoopData = $filters ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $filter): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <select name="<?php echo e($filter['name']); ?>" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                    <option value=""><?php echo e($filter['label']); ?></option>
+                    <?php $__currentLoopData = ($filter['options'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <option value="<?php echo e($value); ?>" <?php if((string) request($filter['name']) === (string) $value): echo 'selected'; endif; ?>><?php echo e($label); ?></option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                </select>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+            <?php if($q || $filterAktif): ?>
+                <a href="<?php echo e(url()->current()); ?>" class="btn btn-sm btn-outline-secondary" title="Reset filter"><i class="bi bi-x-lg"></i></a>
+            <?php endif; ?>
         </form>
         <div class="d-flex gap-2">
             <?php if($canManage): ?>
@@ -41,17 +55,25 @@
                             <?php if($field['list'] ?? true): ?>
                                 <td>
                                     <?php
+                                        $raw = $item->{$field['name']};
                                         $val = isset($field['relation'])
                                             ? data_get($item, $field['relation']['method'].'.'.$field['relation']['display'])
-                                            : (isset($field['options']) ? ($field['options'][$item->{$field['name']}] ?? $item->{$field['name']}) : $item->{$field['name']});
+                                            : ((isset($field['options']) && is_scalar($raw)) ? ($field['options'][$raw] ?? $raw) : $raw);
                                     ?>
                                     <?php if($field['type'] === 'file' && $item->{$field['name']}): ?>
                                         <a href="<?php echo e(Storage::url($item->{$field['name']})); ?>" target="_blank">Lihat File</a>
                                     <?php elseif($field['type'] === 'checkbox'): ?>
                                         <?php echo e($item->{$field['name']} ? 'Ya' : 'Tidak'); ?>
 
+                                    <?php elseif($field['type'] === 'checkboxes'): ?>
+                                        <?php echo e(Illuminate\Support\Str::limit(implode(', ', (array) $item->{$field['name']}), 60) ?: '-'); ?>
+
+                                    <?php elseif($field['type'] === 'textarea'): ?>
+                                        
+                                        <?php echo e(Illuminate\Support\Str::limit(App\Support\TeksKaya::polos($val), 60)); ?>
+
                                     <?php else: ?>
-                                        <?php echo e(Illuminate\Support\Str::limit($val, 60)); ?>
+                                        <?php echo e(Illuminate\Support\Str::limit((string) $val, 60)); ?>
 
                                     <?php endif; ?>
                                 </td>

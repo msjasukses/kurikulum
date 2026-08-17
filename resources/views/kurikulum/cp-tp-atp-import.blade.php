@@ -36,8 +36,10 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
                 <div class="form-text">
-                    Kolom yang dibaca: Kode Mapel, Tingkat Kelas, Fase, Capaian Pembelajaran, Tujuan Pembelajaran,
-                    Alur Tujuan Pembelajaran, Tahun Ajaran. Baris dengan kombinasi Mata Pelajaran + Tingkat Kelas +
+                    Kolom yang dibaca: Kode Mapel, Tingkat Kelas, Fase, Semester, Elemen, Capaian Pembelajaran,
+                    Tujuan Pembelajaran, Alur Tujuan Pembelajaran, Indikator KKTP, Model Pembelajaran, Sumber Belajar,
+                    Karakter DPL, Tahun Ajaran. Kolom Model Pembelajaran, Sumber Belajar, dan Karakter DPL boleh diisi
+                    lebih dari satu, dipisahkan koma. Baris dengan kombinasi Mata Pelajaran + Tingkat Kelas +
                     Fase + Tahun Ajaran yang sudah ada akan <strong>ditimpa</strong> (update), kombinasi baru akan ditambahkan.
                 </div>
             </div>

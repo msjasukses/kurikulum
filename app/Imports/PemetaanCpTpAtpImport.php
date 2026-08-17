@@ -14,8 +14,14 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
  * Import Excel untuk menu Pemetaan CP-TP-ATP.
  *
  * Kolom yang dibaca (heading row, urutan bebas):
- * Kode Mapel | Tingkat Kelas | Fase | Capaian Pembelajaran |
- * Tujuan Pembelajaran | Alur Tujuan Pembelajaran | Tahun Ajaran
+ * Kode Mapel | Tingkat Kelas | Fase | Semester | Elemen |
+ * Capaian Pembelajaran | Tujuan Pembelajaran | Alur Tujuan Pembelajaran |
+ * Indikator KKTP | Model Pembelajaran | Sumber Belajar | Karakter DPL |
+ * Tahun Ajaran
+ *
+ * Kolom Model Pembelajaran, Sumber Belajar, dan Karakter DPL boleh diisi
+ * lebih dari satu pilihan, dipisahkan koma atau titik koma — di aplikasi
+ * isinya tampil sebagai centang (checkbox).
  *
  * "Kode Mapel" dicocokkan ke App\Models\MataPelajaran (database datacenter)
  * dan "Tingkat Kelas" dicocokkan ke App\Models\TingkatKelas (database
@@ -46,6 +52,12 @@ class PemetaanCpTpAtpImport implements ToCollection, WithHeadingRow
             $cp = trim((string) ($row['capaian_pembelajaran'] ?? ''));
             $tp = trim((string) ($row['tujuan_pembelajaran'] ?? ''));
             $atp = trim((string) ($row['alur_tujuan_pembelajaran'] ?? ''));
+            $semester = trim((string) ($row['semester'] ?? ''));
+            $elemen = trim((string) ($row['elemen'] ?? ''));
+            $kktp = trim((string) ($row['indikator_kktp'] ?? ''));
+            $model = $this->pecahPilihan($row['model_pembelajaran'] ?? '');
+            $sumber = $this->pecahPilihan($row['sumber_belajar'] ?? '');
+            $karakter = $this->pecahPilihan($row['karakter_dpl'] ?? '');
             $tahunAjaran = trim((string) ($row['tahun_ajaran'] ?? ''));
 
             // Lewati baris yang benar-benar kosong (mis. sisa baris kosong di file).
@@ -101,13 +113,27 @@ class PemetaanCpTpAtpImport implements ToCollection, WithHeadingRow
                     'tahun_ajaran' => $tahunAjaran !== '' ? $tahunAjaran : app(TahunAjaranTerpilih::class)->nama(),
                 ],
                 [
+                    'semester' => $semester !== '' ? $semester : null,
+                    'elemen' => $elemen !== '' ? $elemen : null,
                     'capaian_pembelajaran' => $cp,
                     'tujuan_pembelajaran' => $tp,
                     'alur_tujuan_pembelajaran' => $atp,
+                    'indikator_kktp' => $kktp !== '' ? $kktp : null,
+                    'model_pembelajaran' => $model,
+                    'sumber_belajar' => $sumber,
+                    'karakter_dpl' => $karakter,
                 ]
             );
 
             $this->berhasil++;
         }
+    }
+
+    /** Ubah isi sel "A, B; C" menjadi array ['A', 'B', 'C']. */
+    private function pecahPilihan($nilai): array
+    {
+        $bagian = preg_split('/[,;\r\n]+/', (string) $nilai) ?: [];
+
+        return array_values(array_filter(array_map('trim', $bagian), fn ($v) => $v !== ''));
     }
 }

@@ -60,6 +60,10 @@
             <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.jurusan*') ? 'active':'' }}" href="{{ route('setting.jurusan.index') }}"><i class="bi bi-diagram-3 me-2"></i>Jurusan</a>
             <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.tahun-ajaran*') ? 'active':'' }}" href="{{ route('setting.tahun-ajaran.index') }}"><i class="bi bi-calendar-range me-2"></i>Tahun Ajaran</a>
             <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.kelas*') ? 'active':'' }}" href="{{ route('setting.kelas.index') }}"><i class="bi bi-door-open me-2"></i>Kelas / Rombel</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.semester*') ? 'active':'' }}" href="{{ route('setting.semester.index') }}"><i class="bi bi-calendar2-week me-2"></i>Semester</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.model-pembelajaran*') ? 'active':'' }}" href="{{ route('setting.model-pembelajaran.index') }}"><i class="bi bi-easel me-2"></i>Model Pembelajaran</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.sumber-belajar*') ? 'active':'' }}" href="{{ route('setting.sumber-belajar.index') }}"><i class="bi bi-book me-2"></i>Sumber Belajar</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('setting.karakter-dpl*') ? 'active':'' }}" href="{{ route('setting.karakter-dpl.index') }}"><i class="bi bi-heart me-2"></i>Karakter 7 KAIH / DPL</a>
         </div>
 
         @php($open = request()->routeIs('kepegawaian.*'))

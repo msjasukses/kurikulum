@@ -51,5 +51,8 @@ class DatabaseSeeder extends Seeder
                 'jam_selesai' => $selesai,
             ]);
         }
+
+        // Master pendukung Pemetaan CP-TP-ATP.
+        $this->call(MasterPembelajaranSeeder::class);
     }
 }

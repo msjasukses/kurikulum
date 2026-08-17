@@ -9,6 +9,7 @@ use App\Models\ModulAjar;
 use App\Models\PemetaanCpTpAtp;
 use App\Models\TingkatKelas;
 use App\Support\TahunAjaranTerpilih;
+use App\Support\TeksKaya;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -37,9 +38,19 @@ class ModulAjarController extends Controller
             ))
             ->when($this->mapelIdsGuru() !== null, fn ($q) => $q->whereIn('mata_pelajaran_id', $this->mapelIdsGuru()))
             ->get([
-            'id', 'mata_pelajaran_id', 'tingkat_kelas_id',
-            'capaian_pembelajaran', 'tujuan_pembelajaran', 'alur_tujuan_pembelajaran',
-        ]);
+                'id', 'mata_pelajaran_id', 'tingkat_kelas_id',
+                'capaian_pembelajaran', 'tujuan_pembelajaran', 'alur_tujuan_pembelajaran',
+            ])
+            // CP/TP/ATP kini boleh diketik lewat editor teks kaya, jadi untuk
+            // isi dropdown dan hasil generate dipakai versi teks polosnya.
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'mata_pelajaran_id' => $p->mata_pelajaran_id,
+                'tingkat_kelas_id' => $p->tingkat_kelas_id,
+                'capaian_pembelajaran' => TeksKaya::polos($p->capaian_pembelajaran),
+                'tujuan_pembelajaran' => TeksKaya::polos($p->tujuan_pembelajaran),
+                'alur_tujuan_pembelajaran' => TeksKaya::polos($p->alur_tujuan_pembelajaran),
+            ]);
 
         // Untuk guru, pilihan mapel & tingkat dibatasi sesuai penugasan di
         // menu Data Guru Mata Pelajaran (datacenter); admin melihat semua.
@@ -167,7 +178,7 @@ class ModulAjarController extends Controller
             $rules[$name] = 'nullable|string';
         }
 
-        return $request->validate($rules, [], [
+        $data = $request->validate($rules, [], [
             'mata_pelajaran_id' => 'Mata Pelajaran',
             'tingkat_kelas_id' => 'Tingkat',
             'jumlah_jam' => 'Jumlah Jam',
@@ -176,5 +187,15 @@ class ModulAjarController extends Controller
             'pemetaan_cp_tp_atp_id' => 'Pilihan ATP',
             'judul' => 'Judul Materi',
         ]);
+
+        // Isi bagian modul & LKPD datang dari editor TinyMCE, jadi HTML-nya
+        // disaring dulu sebelum disimpan.
+        foreach (array_keys(ModulAjar::BAGIAN_ISI + ModulAjar::BAGIAN_LKPD) as $name) {
+            if (array_key_exists($name, $data)) {
+                $data[$name] = ModulAjar::bersihkanHtml($data[$name]);
+            }
+        }
+
+        return $data;
     }
 }

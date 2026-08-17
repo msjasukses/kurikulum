@@ -20,6 +20,18 @@ class SiswaController extends BaseCrudController
         return false;
     }
 
+    /**
+     * Siswa tidak punya kolom tahun ajaran sendiri; penandanya adalah
+     * penempatan kelas di tabel siswa_rombel. Jadi daftar hanya menampilkan
+     * siswa yang punya penempatan pada tahun ajaran yang dipilih di topbar
+     * (lihat relasi rombelSaatIni di App\Models\Siswa).
+     */
+    protected function baseQuery()
+    {
+        return parent::baseQuery()
+            ->when($this->tahunAjaranTerpilih()->id(), fn ($q) => $q->whereHas('rombelSaatIni'));
+    }
+
     protected function fields(): array
     {
         return [

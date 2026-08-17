@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Kurikulum;
 use App\Http\Controllers\Concerns\FilterPenugasanGuru;
 use App\Http\Controllers\Crud\BaseCrudController;
 use App\Models\IdentitasSekolah;
+use App\Models\MataPelajaran;
 use App\Models\PemetaanCpTpAtp;
+use App\Models\Semester;
+use App\Models\TingkatKelas;
 use Illuminate\Support\Str;
 
 class PemetaanCpTpAtpController extends BaseCrudController
@@ -30,12 +33,66 @@ class PemetaanCpTpAtpController extends BaseCrudController
     /** Pemetaan mengikuti tahun ajaran yang dipilih di topbar. */
     protected ?string $tahunAjaranColumn = 'tahun_ajaran';
 
+    /**
+     * Filter daftar: tingkat kelas, mata pelajaran, dan semester. Pilihan
+     * tingkat & mapel untuk guru dibatasi sesuai penugasannya.
+     */
+    protected function filters(): array
+    {
+        $mapelIds = $this->mapelIdsGuru();
+        $tingkatIds = $this->tingkatIdsGuru();
+
+        return [
+            [
+                'name' => 'tingkat_kelas_id',
+                'label' => 'Semua Tingkat Kelas',
+                'title' => 'Tingkat Kelas',
+                'options' => TingkatKelas::when($tingkatIds !== null, fn ($q) => $q->whereIn('id', $tingkatIds))
+                    ->orderBy('urutan')->pluck('nama', 'id')->all(),
+            ],
+            [
+                'name' => 'mata_pelajaran_id',
+                'label' => 'Semua Mata Pelajaran',
+                'title' => 'Mata Pelajaran',
+                'options' => MataPelajaran::when($mapelIds !== null, fn ($q) => $q->whereIn('id', $mapelIds))
+                    ->orderBy('nama_mapel')->pluck('nama_mapel', 'id')->all(),
+            ],
+            [
+                'name' => 'semester',
+                'label' => 'Semua Semester',
+                'title' => 'Semester',
+                'options' => Semester::where('is_aktif', 1)->orderBy('urutan')->pluck('nama', 'nama')->all(),
+            ],
+        ];
+    }
+
+    /** Filter yang sedang aktif dalam bentuk ['Mata Pelajaran' => 'Matematika']. */
+    private function ringkasanFilter(): array
+    {
+        $ringkasan = [];
+
+        foreach ($this->filters() as $filter) {
+            $nilai = request()->input($filter['name']);
+
+            if ($nilai !== null && $nilai !== '') {
+                $judul = $filter['title'] ?? $filter['label'];
+                $ringkasan[$judul] = $filter['options'][$nilai] ?? $nilai;
+            }
+        }
+
+        return $ringkasan;
+    }
+
     protected function extraActions(): array
     {
+        // Tombol cetak membawa kata kunci pencarian dan filter yang sedang
+        // aktif, supaya hasil cetak sama persis dengan yang tampil di layar.
+        $query = $this->filterQuery();
+
         return [
             ['label' => 'Import Excel', 'url' => route('kurikulum.cp-tp-atp-import.form'), 'icon' => 'bi-upload'],
-            ['label' => 'Cetak PDF', 'url' => route('kurikulum.cp-tp-atp-cetak.pdf', request()->only('q')), 'icon' => 'bi-file-earmark-pdf'],
-            ['label' => 'Cetak Word', 'url' => route('kurikulum.cp-tp-atp-cetak.word', request()->only('q')), 'icon' => 'bi-file-earmark-word'],
+            ['label' => 'Cetak PDF', 'url' => route('kurikulum.cp-tp-atp-cetak.pdf', $query), 'icon' => 'bi-file-earmark-pdf'],
+            ['label' => 'Cetak Word', 'url' => route('kurikulum.cp-tp-atp-cetak.word', $query), 'icon' => 'bi-file-earmark-word'],
         ];
     }
 
@@ -55,12 +112,14 @@ class PemetaanCpTpAtpController extends BaseCrudController
     {
         $q = trim((string) request('q'));
 
-        $items = $this->baseQuery()->with(['mataPelajaran', 'tingkatKelas'])
+        $items = $this->applyFilters($this->baseQuery()->with(['mataPelajaran', 'tingkatKelas']))
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($x) use ($q) {
                     $x->where('capaian_pembelajaran', 'like', "%{$q}%")
                         ->orWhere('tujuan_pembelajaran', 'like', "%{$q}%")
-                        ->orWhere('alur_tujuan_pembelajaran', 'like', "%{$q}%");
+                        ->orWhere('alur_tujuan_pembelajaran', 'like', "%{$q}%")
+                        ->orWhere('elemen', 'like', "%{$q}%")
+                        ->orWhere('indikator_kktp', 'like', "%{$q}%");
                 });
             })
             ->get()
@@ -70,13 +129,28 @@ class PemetaanCpTpAtpController extends BaseCrudController
             ])
             ->values();
 
-        $view = view('kurikulum.cp-tp-atp-cetak', [
+        $filterAktif = $this->ringkasanFilter();
+
+        $data = [
             'items' => $items,
             'identitas' => IdentitasSekolah::first(),
+            'tahunAjaran' => $this->tahunAjaranTerpilih()->nama(),
+            'filterAktif' => $filterAktif,
+            'kataKunci' => $q,
             'autoPrint' => false,
-        ]);
+        ];
 
-        $namaFile = 'pemetaan-cp-tp-atp'.($q ? '-'.Str::slug($q) : '');
+        $view = view('kurikulum.cp-tp-atp-cetak', $data);
+
+        // Nama file ikut menyebutkan filter yang dipakai, mis.
+        // "pemetaan-cp-tp-atp-kelas-7-matematika-ganjil.pdf".
+        $namaFile = collect(['pemetaan-cp-tp-atp'])
+            ->merge(array_values($filterAktif))
+            ->push($q)
+            ->filter()
+            ->map(fn ($bagian) => Str::slug($bagian))
+            ->filter()
+            ->implode('-');
 
         if ($format === 'word') {
             return response($view->render(), 200, [
@@ -93,11 +167,7 @@ class PemetaanCpTpAtpController extends BaseCrudController
 
         // Fallback tanpa dompdf: tampilan cetak yang langsung membuka dialog
         // print browser (bisa disimpan sebagai PDF dari sana).
-        return view('kurikulum.cp-tp-atp-cetak', [
-            'items' => $items,
-            'identitas' => IdentitasSekolah::first(),
-            'autoPrint' => true,
-        ]);
+        return view('kurikulum.cp-tp-atp-cetak', ['autoPrint' => true] + $data);
     }
 
     protected function fields(): array
@@ -106,9 +176,15 @@ class PemetaanCpTpAtpController extends BaseCrudController
             ['name' => 'mata_pelajaran_id', 'label' => 'Mata Pelajaran', 'type' => 'select', 'rules' => 'required|integer', 'relation' => ['method' => 'mataPelajaran', 'model' => \App\Models\MataPelajaran::class, 'display' => 'nama_mapel'] + $this->idsFilter($this->mapelIdsGuru())],
             ['name' => 'tingkat_kelas_id', 'label' => 'Tingkat Kelas', 'type' => 'select', 'rules' => 'required|integer', 'relation' => ['method' => 'tingkatKelas', 'model' => \App\Models\TingkatKelas::class, 'display' => 'nama'] + $this->idsFilter($this->tingkatIdsGuru())],
             ['name' => 'fase', 'label' => 'Fase', 'type' => 'select', 'rules' => 'nullable|string', 'options' => ['A' => 'Fase A', 'B' => 'Fase B', 'C' => 'Fase C', 'D' => 'Fase D', 'E' => 'Fase E', 'F' => 'Fase F']],
-            ['name' => 'capaian_pembelajaran', 'label' => 'Capaian Pembelajaran (CP)', 'type' => 'textarea', 'rules' => 'required|string'],
-            ['name' => 'tujuan_pembelajaran', 'label' => 'Tujuan Pembelajaran (TP)', 'type' => 'textarea', 'rules' => 'required|string'],
-            ['name' => 'alur_tujuan_pembelajaran', 'label' => 'Alur Tujuan Pembelajaran (ATP)', 'type' => 'textarea', 'rules' => 'required|string'],
+            ['name' => 'semester', 'label' => 'Semester', 'type' => 'select', 'rules' => 'nullable|string', 'optionsFrom' => ['model' => \App\Models\Semester::class, 'column' => 'nama', 'orderBy' => 'urutan', 'dir' => 'asc', 'where' => ['is_aktif' => 1]]],
+            ['name' => 'elemen', 'label' => 'Elemen', 'type' => 'textarea', 'rules' => 'nullable|string', 'editor' => true],
+            ['name' => 'capaian_pembelajaran', 'label' => 'Capaian Pembelajaran (CP)', 'type' => 'textarea', 'rules' => 'required|string', 'editor' => true],
+            ['name' => 'tujuan_pembelajaran', 'label' => 'Tujuan Pembelajaran (TP)', 'type' => 'textarea', 'rules' => 'required|string', 'editor' => true],
+            ['name' => 'alur_tujuan_pembelajaran', 'label' => 'Alur Tujuan Pembelajaran (ATP)', 'type' => 'textarea', 'rules' => 'required|string', 'editor' => true],
+            ['name' => 'indikator_kktp', 'label' => 'Indikator KKTP', 'type' => 'textarea', 'rules' => 'nullable|string', 'editor' => true],
+            ['name' => 'model_pembelajaran', 'label' => 'Model Pembelajaran', 'type' => 'checkboxes', 'rules' => 'nullable|array', 'optionsFrom' => ['model' => \App\Models\ModelPembelajaran::class, 'column' => 'nama', 'dir' => 'asc', 'where' => ['is_aktif' => 1]]],
+            ['name' => 'sumber_belajar', 'label' => 'Sumber Belajar', 'type' => 'checkboxes', 'rules' => 'nullable|array', 'optionsFrom' => ['model' => \App\Models\SumberBelajar::class, 'column' => 'nama', 'dir' => 'asc', 'where' => ['is_aktif' => 1]]],
+            ['name' => 'karakter_dpl', 'label' => 'Karakter 7 KAIH / DPL', 'type' => 'checkboxes', 'rules' => 'nullable|array', 'optionsFrom' => ['model' => \App\Models\KarakterDpl::class, 'column' => 'nama', 'orderBy' => 'urutan', 'dir' => 'asc', 'where' => ['is_aktif' => 1]]],
             ['name' => 'tahun_ajaran', 'label' => 'Tahun Ajaran', 'type' => 'text', 'auto' => true],
         ];
     }

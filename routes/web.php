@@ -25,8 +25,12 @@ use App\Http\Controllers\Setting\IdentitasSekolahController;
 use App\Http\Controllers\Setting\JamMengajarController;
 use App\Http\Controllers\Setting\JenisEskulController;
 use App\Http\Controllers\Setting\JurusanController;
+use App\Http\Controllers\Setting\KarakterDplController;
 use App\Http\Controllers\Setting\KelasController;
 use App\Http\Controllers\Setting\MataPelajaranController;
+use App\Http\Controllers\Setting\ModelPembelajaranController;
+use App\Http\Controllers\Setting\SemesterController;
+use App\Http\Controllers\Setting\SumberBelajarController;
 use App\Http\Controllers\Setting\TingkatKelasController;
 use App\Http\Controllers\Setting\TahunAjaranController;
 use App\Http\Controllers\Users\UserAdminController;
@@ -66,6 +70,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('jurusan', JurusanController::class)->except(['show'])->names('jurusan');
         Route::resource('tahun-ajaran', TahunAjaranController::class)->except(['show'])->names('tahun-ajaran');
         Route::resource('kelas', KelasController::class)->except(['show'])->names('kelas');
+
+        // Master pendukung Pemetaan CP-TP-ATP.
+        Route::resource('semester', SemesterController::class)->except(['show'])->names('semester');
+        Route::resource('model-pembelajaran', ModelPembelajaranController::class)->except(['show'])->names('model-pembelajaran');
+        Route::resource('sumber-belajar', SumberBelajarController::class)->except(['show'])->names('sumber-belajar');
+        Route::resource('karakter-dpl', KarakterDplController::class)->except(['show'])->names('karakter-dpl');
     });
 
     // ================= Kepegawaian (admin) =================

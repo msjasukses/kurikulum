@@ -15,10 +15,27 @@ class PemetaanCpTpAtp extends Model
         'mata_pelajaran_id',
         'tingkat_kelas_id',
         'fase',
+        'semester',
+        'elemen',
         'capaian_pembelajaran',
         'tujuan_pembelajaran',
         'alur_tujuan_pembelajaran',
+        'indikator_kktp',
+        'model_pembelajaran',
+        'sumber_belajar',
+        'karakter_dpl',
         'tahun_ajaran',
+    ];
+
+    /**
+     * Tiga kolom pilihan ganda disimpan sebagai JSON berisi nama pilihan
+     * (mengacu ke master Model Pembelajaran, Sumber Belajar, dan Karakter
+     * 7 KAIH/DPL) supaya isinya tetap terbaca meski master berubah.
+     */
+    protected $casts = [
+        'model_pembelajaran' => 'array',
+        'sumber_belajar' => 'array',
+        'karakter_dpl' => 'array',
     ];
 
     public function mataPelajaran()

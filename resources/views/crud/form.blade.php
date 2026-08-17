@@ -3,8 +3,9 @@
 @section('content')
 @php
     $hasFile = collect($fields)->contains(fn($f) => $f['type'] === 'file');
+    $pakaiEditor = collect($fields)->contains(fn($f) => !empty($f['editor']));
 @endphp
-<div class="card shadow-sm" style="max-width:760px;">
+<div class="card shadow-sm" style="max-width:{{ $pakaiEditor ? '1000px' : '760px' }};">
     <div class="card-header bg-white">
         {{ $item ? 'Ubah' : 'Tambah' }} {{ $title }}
     </div>
@@ -26,7 +27,9 @@
                         <div class="form-text">Mengikuti tahun ajaran yang dipilih di kanan atas halaman.</div>
 
                     @elseif($field['type'] === 'textarea')
-                        <textarea name="{{ $name }}" rows="3" class="form-control @error($name) is-invalid @enderror" placeholder="{{ $field['placeholder'] ?? '' }}">{{ $old }}</textarea>
+                        <textarea name="{{ $name }}" rows="{{ !empty($field['editor']) ? 6 : 3 }}"
+                                  class="form-control @error($name) is-invalid @enderror @if(!empty($field['editor'])) editor-html @endif"
+                                  placeholder="{{ $field['placeholder'] ?? '' }}">{{ $old }}</textarea>
 
                     @elseif($field['type'] === 'select')
                         <select name="{{ $name }}" class="form-select @error($name) is-invalid @enderror">
@@ -41,6 +44,21 @@
                             <input type="hidden" name="{{ $name }}" value="0">
                             <input type="checkbox" name="{{ $name }}" value="1" class="form-check-input" @checked($old)>
                         </div>
+
+                    @elseif($field['type'] === 'checkboxes')
+                        @php $terpilih = array_map('strval', (array) old($name, $item->{$name} ?? [])); @endphp
+                        <div class="border rounded p-2 @error($name) border-danger @enderror" style="max-height:220px; overflow-y:auto;">
+                            @forelse(($field['options'] ?? []) as $value => $label)
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="{{ $name }}-{{ $loop->index }}"
+                                           name="{{ $name }}[]" value="{{ $value }}" @checked(in_array((string) $value, $terpilih, true))>
+                                    <label class="form-check-label" for="{{ $name }}-{{ $loop->index }}">{{ $label }}</label>
+                                </div>
+                            @empty
+                                <div class="text-muted small">Belum ada data master untuk pilihan ini.</div>
+                            @endforelse
+                        </div>
+                        <div class="form-text">Boleh dicentang lebih dari satu.</div>
 
                     @elseif($field['type'] === 'file')
                         <input type="file" name="{{ $name }}" class="form-control @error($name) is-invalid @enderror">
@@ -68,4 +86,10 @@
         </form>
     </div>
 </div>
+
+@if($pakaiEditor)
+    @push('scripts')
+        @include('partials.tinymce')
+    @endpush
+@endif
 @endsection

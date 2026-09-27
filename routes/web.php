@@ -39,8 +39,17 @@ use App\Http\Controllers\Users\UserAdminController;
 use App\Http\Controllers\Users\UserGuruController;
 use App\Http\Controllers\Users\UserSiswaController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
+
+// Cadangan bila symlink public/storage belum dibuat (mis. di hosting tanpa
+// `php artisan storage:link`): file di disk public tetap bisa diakses.
+Route::get('/storage/{path}', function (string $path) {
+    abort_if(str_contains($path, '..') || ! Storage::disk('public')->exists($path), 404);
+
+    return response()->file(Storage::disk('public')->path($path));
+})->where('path', '.*')->name('storage.fallback');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');

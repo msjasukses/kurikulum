@@ -71,7 +71,8 @@
         <div class="puncak">
             <div class="logo-kotak">
                 <?php if(optional($identitas)->logo): ?>
-                    <img src="<?php echo e(Storage::url($identitas->logo)); ?>" alt="Logo <?php echo e($namaSekolah); ?>">
+                    <img src="<?php echo e(Storage::url($identitas->logo)); ?>" alt="Logo <?php echo e($namaSekolah); ?>"
+                         onerror="this.replaceWith(document.createTextNode('<?php echo e(strtoupper(mb_substr($namaSekolah, 0, 1))); ?>'))">
                 <?php else: ?>
                     <?php echo e(strtoupper(mb_substr($namaSekolah, 0, 1))); ?>
 

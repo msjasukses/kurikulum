@@ -71,7 +71,8 @@
         <div class="puncak">
             <div class="logo-kotak">
                 @if(optional($identitas)->logo)
-                    <img src="{{ Storage::url($identitas->logo) }}" alt="Logo {{ $namaSekolah }}">
+                    <img src="{{ Storage::url($identitas->logo) }}" alt="Logo {{ $namaSekolah }}"
+                         onerror="this.replaceWith(document.createTextNode('{{ strtoupper(mb_substr($namaSekolah, 0, 1)) }}'))">
                 @else
                     {{ strtoupper(mb_substr($namaSekolah, 0, 1)) }}
                 @endif

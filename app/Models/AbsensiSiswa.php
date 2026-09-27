@@ -14,6 +14,7 @@ class AbsensiSiswa extends Model
     protected $fillable = [
         'siswa_id',
         'kelas_id',
+        'mata_pelajaran_id',
         'tanggal',
         'status',
         'keterangan',
@@ -32,5 +33,10 @@ class AbsensiSiswa extends Model
     public function kelas()
     {
         return $this->belongsTo(Kelas::class);
+    }
+
+    public function mataPelajaran()
+    {
+        return $this->belongsTo(MataPelajaran::class);
     }
 }

@@ -18,11 +18,12 @@ class LoginController extends Controller
 {
     public function create(): View
     {
-        // Nama sekolah diambil dari Master Data > Identitas Sekolah; bila
-        // belum diisi, pakai nama aplikasi sebagai cadangan.
-        $namaSekolah = IdentitasSekolah::value('nama_sekolah') ?: config('app.name');
+        // Identitas dipakai untuk nama sekolah, logo, dan tautan beranda
+        // di halaman login; bila belum diisi, pakai nama aplikasi.
+        $identitas = IdentitasSekolah::first();
+        $namaSekolah = optional($identitas)->nama_sekolah ?: config('app.name');
 
-        return view('auth.login', compact('namaSekolah'));
+        return view('auth.login', compact('namaSekolah', 'identitas'));
     }
 
     public function store(Request $request): RedirectResponse

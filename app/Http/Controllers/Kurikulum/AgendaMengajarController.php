@@ -129,38 +129,48 @@ class AgendaMengajarController extends Controller
             ->sortBy(fn ($j) => optional($j->jamMengajar)->jam_ke)
             ->values();
 
-        // Jumlah siswa per kelas (tahun ajaran aktif) untuk autofill Jumlah Siswa.
-        $siswaPerKelas = SiswaRombel::query()
+        // Kelas pilihan: kelas tahun ajaran terpilih, ditambah kelas yang
+        // dipakai jadwal hari ini (mis. jadwal lama yang masih menunjuk kelas
+        // tahun sebelumnya) supaya pengisian otomatis tetap menemukan kelasnya.
+        $kelasList = Kelas::with('tahunAjaran')
             ->when($tahunAktif, fn ($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
+            ->orWhereIn('id', $jadwalHariIni->pluck('kelas_id')->filter()->unique())
+            ->orderBy('nama_rombel')->get();
+
+        // Jumlah siswa per kelas untuk autofill Jumlah Siswa. Tidak disaring
+        // per tahun ajaran karena baris siswa_rombel sudah menempel ke kelas.
+        $siswaPerKelas = SiswaRombel::whereIn('rombongan_belajar_id', $kelasList->pluck('id'))
             ->selectRaw('rombongan_belajar_id, count(*) as jumlah')
             ->groupBy('rombongan_belajar_id')
             ->pluck('jumlah', 'rombongan_belajar_id');
 
-        // Daftar nama siswa per kelas untuk pilihan "siswa tidak hadir".
+        // Daftar siswa per kelas (id + nama) untuk pengisian kehadiran.
         $siswaPerKelasNama = SiswaRombel::with('siswa')
-            ->when($tahunAktif, fn ($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
+            ->whereIn('rombongan_belajar_id', $kelasList->pluck('id'))
             ->get()
             ->groupBy('rombongan_belajar_id')
-            ->map(fn ($g) => $g->map(fn ($sr) => optional($sr->siswa)->nama_siswa)
-                ->filter()->sort()->values());
+            ->map(fn ($g) => $g->map(fn ($sr) => $sr->siswa ? [
+                'id' => $sr->siswa->id,
+                'nama' => $sr->siswa->nama_siswa,
+            ] : null)->filter()->sortBy('nama')->values());
 
         return [
             'hariIni' => $hariIni,
             'tahunAktif' => $tahunAktif,
             'guruList' => Guru::where('is_aktif', true)->orderBy('nama_ptk')->get(),
-            'kelasList' => Kelas::when($tahunAktif, fn ($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-                ->orderBy('nama_rombel')->get(),
+            'kelasList' => $kelasList,
             'mapelList' => MataPelajaran::orderBy('nama_mapel')->get(),
             'modulList' => ModulAjar::orderByDesc('id')->get(['id', 'judul', 'mata_pelajaran_id']),
             'jadwalHariIni' => $jadwalHariIni,
             'siswaPerKelas' => $siswaPerKelas,
             'siswaPerKelasNama' => $siswaPerKelasNama,
+            'statusKehadiran' => AgendaMengajar::STATUS_KEHADIRAN,
         ];
     }
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'guru_id' => 'required|integer',
             'mengajar_sebagai' => 'required|in:normal,pengganti',
             'jam_ke' => 'nullable|string|max:20',
@@ -169,9 +179,8 @@ class AgendaMengajarController extends Controller
             'paralel' => 'nullable|string|max:10',
             'mata_pelajaran_id' => 'required|integer',
             'jumlah_siswa' => 'required|integer|min:0',
-            'hadir' => 'required|integer|min:0',
-            'absen' => 'required|integer|min:0',
-            'siswa_absen' => 'nullable|string',
+            'kehadiran' => 'nullable|array',
+            'kehadiran.*' => 'in:'.implode(',', AgendaMengajar::STATUS_KEHADIRAN),
             'modul_ajar_id' => 'nullable|integer',
             'materi' => 'nullable|string',
             'catatan' => 'nullable|string',
@@ -186,6 +195,47 @@ class AgendaMengajarController extends Controller
             'modul_ajar_id' => 'Modul Ajar',
             'materi' => 'Materi Pembelajaran',
         ]);
+
+        // Hadir/tidak hadir dan daftar nama dihitung dari pilihan status
+        // tiap siswa, bukan dari angka yang dikirim halaman.
+        return array_merge($data, $this->rekapKehadiran($request));
+    }
+
+    /**
+     * Susun rincian kehadiran siswa: rincian JSON, ringkasan teks nama
+     * yang tidak hadir, serta jumlah hadir dan tidak hadir.
+     */
+    private function rekapKehadiran(Request $request): array
+    {
+        $pilihan = (array) $request->input('kehadiran', []);
+        $nama = (array) $request->input('kehadiran_nama', []);
+
+        if (empty($pilihan)) {
+            return [];
+        }
+
+        $rincian = [];
+        $tidakHadir = [];
+        $hadir = 0;
+
+        foreach ($pilihan as $siswaId => $status) {
+            $namaSiswa = trim((string) ($nama[$siswaId] ?? ''));
+            $rincian[] = ['siswa_id' => (int) $siswaId, 'nama' => $namaSiswa, 'status' => $status];
+
+            if ($status === 'Hadir') {
+                $hadir++;
+            } else {
+                $tidakHadir[] = $namaSiswa.' ('.$status.')';
+            }
+        }
+
+        return [
+            'kehadiran_siswa' => $rincian,
+            'siswa_absen' => implode(', ', $tidakHadir) ?: null,
+            'jumlah_siswa' => count($rincian),
+            'hadir' => $hadir,
+            'absen' => count($rincian) - $hadir,
+        ];
     }
 
     private function simpanPhoto(Request $request): ?string

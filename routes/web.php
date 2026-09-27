@@ -20,9 +20,11 @@ use App\Http\Controllers\Kurikulum\PemetaanCpTpAtpImportController;
 use App\Http\Controllers\PilihTahunAjaranController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RuangBelajar\MateriOnlineController;
+use App\Http\Controllers\RuangBelajar\PengumpulanTugasController;
 use App\Http\Controllers\RuangBelajar\TugasController;
 use App\Http\Controllers\Setting\IdentitasSekolahController;
 use App\Http\Controllers\Setting\JamMengajarController;
+use App\Http\Controllers\Setting\JamMengajarImportController;
 use App\Http\Controllers\Setting\JenisEskulController;
 use App\Http\Controllers\Setting\JurusanController;
 use App\Http\Controllers\Setting\KarakterDplController;
@@ -57,6 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profil', [ProfilController::class, 'edit'])->name('profil.edit');
     Route::put('/profil', [ProfilController::class, 'update'])->name('profil.update');
     Route::put('/profil/password', [ProfilController::class, 'updatePassword'])->name('profil.password');
+    Route::put('/profil/ai', [ProfilController::class, 'updateAi'])->name('profil.ai');
 
     // ================= Master Data (admin) =================
     Route::middleware('role:admin')->prefix('setting')->name('setting.')->group(function () {
@@ -64,6 +67,9 @@ Route::middleware('auth')->group(function () {
         Route::put('identitas', [IdentitasSekolahController::class, 'update'])->name('identitas.update');
 
         Route::resource('jam-mengajar', JamMengajarController::class)->except(['show'])->names('jam-mengajar');
+        Route::get('jam-mengajar-import', [JamMengajarImportController::class, 'form'])->name('jam-mengajar-import.form');
+        Route::post('jam-mengajar-import', [JamMengajarImportController::class, 'import'])->name('jam-mengajar-import.store');
+        Route::get('jam-mengajar-import/template', [JamMengajarImportController::class, 'template'])->name('jam-mengajar-import.template');
         Route::resource('mata-pelajaran', MataPelajaranController::class)->except(['show'])->names('mata-pelajaran');
         Route::resource('jenis-eskul', JenisEskulController::class)->except(['show'])->names('jenis-eskul');
         Route::resource('tingkat-kelas', TingkatKelasController::class)->except(['show'])->names('tingkat-kelas');
@@ -113,6 +119,7 @@ Route::middleware('auth')->group(function () {
         Route::get('cp-tp-atp-cetak/word', [PemetaanCpTpAtpController::class, 'word'])->name('cp-tp-atp-cetak.word');
         Route::get('modul-ajar', [ModulAjarController::class, 'index'])->name('modul-ajar.index');
         Route::post('modul-ajar', [ModulAjarController::class, 'store'])->name('modul-ajar.store');
+        Route::post('modul-ajar/generate', [ModulAjarController::class, 'generate'])->name('modul-ajar.generate');
         Route::delete('modul-ajar/{id}', [ModulAjarController::class, 'destroy'])->name('modul-ajar.destroy');
         Route::get('modul-ajar/{id}/pdf', [ModulAjarController::class, 'pdf'])->name('modul-ajar.pdf');
         Route::get('modul-ajar/{id}/word', [ModulAjarController::class, 'word'])->name('modul-ajar.word');
@@ -131,6 +138,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin,guru,siswa')->prefix('ruangbelajar')->name('ruangbelajar.')->group(function () {
         Route::resource('materi', MateriOnlineController::class)->except(['show'])->names('materi');
         Route::resource('tugas', TugasController::class)->except(['show'])->names('tugas');
+
+        // Pengumpulan tugas: siswa mengunggah jawaban, guru menilainya.
+        Route::get('tugas/{tugas}/kumpul', [PengumpulanTugasController::class, 'form'])->name('pengumpulan.form');
+        Route::post('tugas/{tugas}/kumpul', [PengumpulanTugasController::class, 'store'])->name('pengumpulan.store');
+        Route::get('tugas/{tugas}/pengumpulan', [PengumpulanTugasController::class, 'daftar'])->name('pengumpulan.daftar');
+        Route::post('pengumpulan/{pengumpulan}/nilai', [PengumpulanTugasController::class, 'nilai'])->name('pengumpulan.nilai');
     });
 
     // ================= Absensi =================

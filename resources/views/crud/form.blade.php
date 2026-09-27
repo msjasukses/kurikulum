@@ -17,6 +17,7 @@
             @if($item) @method('PUT') @endif
 
             @foreach($fields as $field)
+                @continue($field['type'] === 'computed')
                 @php $name = $field['name']; $old = old($name, $item->{$name} ?? null); @endphp
                 <div class="mb-3">
                     <label class="form-label">{{ $field['label'] }}</label>
@@ -30,6 +31,23 @@
                         <textarea name="{{ $name }}" rows="{{ !empty($field['editor']) ? 6 : 3 }}"
                                   class="form-control @error($name) is-invalid @enderror @if(!empty($field['editor'])) editor-html @endif"
                                   placeholder="{{ $field['placeholder'] ?? '' }}">{{ $old }}</textarea>
+
+                    @elseif($field['type'] === 'select' && !empty($field['multiple']))
+                        {{-- Pilihan boleh lebih dari satu, ditampilkan sebagai daftar centang. --}}
+                        @php $terpilihSelect = array_map('strval', (array) old($name, $item->{$name} ?? [])); @endphp
+                        <div id="pilihan-{{ $name }}" data-awal="{{ $item->{$name} ?? '' }}"
+                             class="border rounded p-2 @error($name) border-danger @enderror" style="max-height:260px; overflow-y:auto;">
+                            @forelse(($field['options'] ?? []) as $value => $label)
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="{{ $name }}-{{ $loop->index }}"
+                                           name="{{ $name }}[]" value="{{ $value }}" @checked(in_array((string) $value, $terpilihSelect, true))>
+                                    <label class="form-check-label" for="{{ $name }}-{{ $loop->index }}">{{ $label }}</label>
+                                </div>
+                            @empty
+                                <div class="text-muted small">Belum ada pilihan yang tersedia.</div>
+                            @endforelse
+                        </div>
+                        <div class="form-text">{{ $field['hint'] ?? 'Boleh dicentang lebih dari satu.' }}</div>
 
                     @elseif($field['type'] === 'select')
                         <select name="{{ $name }}" class="form-select @error($name) is-invalid @enderror">
@@ -90,6 +108,13 @@
 @if($pakaiEditor)
     @push('scripts')
         @include('partials.tinymce')
+    @endpush
+@endif
+
+{{-- Script khusus milik controller, mis. dropdown bertingkat. --}}
+@if(!empty($formScript ?? null))
+    @push('scripts')
+        @include($formScript)
     @endpush
 @endif
 @endsection

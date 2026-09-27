@@ -17,6 +17,7 @@
             <?php if($item): ?> <?php echo method_field('PUT'); ?> <?php endif; ?>
 
             <?php $__currentLoopData = $fields; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $field): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php if($field['type'] === 'computed') continue; ?>
                 <?php $name = $field['name']; $old = old($name, $item->{$name} ?? null); ?>
                 <div class="mb-3">
                     <label class="form-label"><?php echo e($field['label']); ?></label>
@@ -37,6 +38,30 @@ if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?> <?php if(!empty($field['editor'])): ?> editor-html <?php endif; ?>"
                                   placeholder="<?php echo e($field['placeholder'] ?? ''); ?>"><?php echo e($old); ?></textarea>
+
+                    <?php elseif($field['type'] === 'select' && !empty($field['multiple'])): ?>
+                        
+                        <?php $terpilihSelect = array_map('strval', (array) old($name, $item->{$name} ?? [])); ?>
+                        <div id="pilihan-<?php echo e($name); ?>" data-awal="<?php echo e($item->{$name} ?? ''); ?>"
+                             class="border rounded p-2 <?php $__errorArgs = [$name];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-danger <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" style="max-height:260px; overflow-y:auto;">
+                            <?php $__empty_1 = true; $__currentLoopData = ($field['options'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="<?php echo e($name); ?>-<?php echo e($loop->index); ?>"
+                                           name="<?php echo e($name); ?>[]" value="<?php echo e($value); ?>" <?php if(in_array((string) $value, $terpilihSelect, true)): echo 'checked'; endif; ?>>
+                                    <label class="form-check-label" for="<?php echo e($name); ?>-<?php echo e($loop->index); ?>"><?php echo e($label); ?></label>
+                                </div>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                                <div class="text-muted small">Belum ada pilihan yang tersedia.</div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="form-text"><?php echo e($field['hint'] ?? 'Boleh dicentang lebih dari satu.'); ?></div>
 
                     <?php elseif($field['type'] === 'select'): ?>
                         <select name="<?php echo e($name); ?>" class="form-select <?php $__errorArgs = [$name];
@@ -139,6 +164,13 @@ unset($__errorArgs, $__bag); ?>
 <?php if($pakaiEditor): ?>
     <?php $__env->startPush('scripts'); ?>
         <?php echo $__env->make('partials.tinymce', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <?php $__env->stopPush(); ?>
+<?php endif; ?>
+
+
+<?php if(!empty($formScript ?? null)): ?>
+    <?php $__env->startPush('scripts'); ?>
+        <?php echo $__env->make($formScript, \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     <?php $__env->stopPush(); ?>
 <?php endif; ?>
 <?php $__env->stopSection(); ?>

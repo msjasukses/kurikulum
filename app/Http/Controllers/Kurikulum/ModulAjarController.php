@@ -8,8 +8,10 @@ use App\Models\MataPelajaran;
 use App\Models\ModulAjar;
 use App\Models\PemetaanCpTpAtp;
 use App\Models\TingkatKelas;
+use App\Services\GeneratorModulAjarAi;
 use App\Support\TahunAjaranTerpilih;
 use App\Support\TeksKaya;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -100,6 +102,71 @@ class ModulAjarController extends Controller
 
         return redirect()->route('kurikulum.modul-ajar.index')
             ->with('success', 'Modul ajar berhasil disimpan.');
+    }
+
+    /**
+     * Susun isi modul & LKPD dengan AI dari konteks yang sudah dipilih di
+     * form. Penyedia dan kunci API mengikuti pengaturan akun yang login
+     * (Setting Profil). Dipanggil lewat AJAX oleh tombol "Generate Modul Ajar".
+     */
+    public function generate(Request $request, GeneratorModulAjarAi $ai): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $ai->tersedia($user)) {
+            return response()->json([
+                'tersedia' => false,
+                'pesan' => 'Kunci API AI belum diatur. Isi dulu di menu Setting Profil — untuk sementara modul disusun memakai kerangka bawaan aplikasi.',
+            ], 200);
+        }
+
+        $data = $request->validate([
+            'mata_pelajaran_id' => 'required|integer',
+            'tingkat_kelas_id' => 'required|integer',
+            'judul' => 'required|string|max:150',
+            'jumlah_jam' => 'nullable|integer|min:1',
+            'pertemuan_ke' => 'nullable|integer|min:1',
+            'semester' => 'nullable|string|max:20',
+            'pemetaan_cp_tp_atp_id' => 'nullable|integer|exists:pemetaan_cp_tp_atp,id',
+            'capaian_pembelajaran' => 'nullable|string',
+            'tujuan_pembelajaran' => 'nullable|string',
+        ], [], ['judul' => 'Judul Materi']);
+
+        $konteks = [
+            'mapel' => optional(MataPelajaran::find($data['mata_pelajaran_id']))->nama_mapel,
+            'tingkat' => optional(TingkatKelas::find($data['tingkat_kelas_id']))->nama,
+            'semester' => $data['semester'] ?? null,
+            'jumlah_jam' => $data['jumlah_jam'] ?? null,
+            'pertemuan_ke' => $data['pertemuan_ke'] ?? null,
+            'judul' => $data['judul'],
+            'cp' => TeksKaya::polos($data['capaian_pembelajaran'] ?? null) ?: null,
+            'tp' => TeksKaya::polos($data['tujuan_pembelajaran'] ?? null) ?: null,
+        ];
+
+        // Bila ATP dipilih, CP/TP/ATP diambil dari baris pemetaannya supaya
+        // isinya utuh (bukan teks terpotong dari dropdown).
+        if (! empty($data['pemetaan_cp_tp_atp_id']) && $pemetaan = PemetaanCpTpAtp::find($data['pemetaan_cp_tp_atp_id'])) {
+            $konteks['cp'] = TeksKaya::polos($pemetaan->capaian_pembelajaran) ?: $konteks['cp'];
+            $konteks['tp'] = TeksKaya::polos($pemetaan->tujuan_pembelajaran) ?: $konteks['tp'];
+            $konteks['atp'] = TeksKaya::polos($pemetaan->alur_tujuan_pembelajaran) ?: null;
+            $konteks['fase'] = $pemetaan->fase;
+        }
+
+        // Penyusunan bisa memakan waktu puluhan detik, jangan dipotong server.
+        set_time_limit(180);
+
+        try {
+            $isi = $ai->generate($konteks, $user);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'tersedia' => true,
+                'pesan' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json(['tersedia' => true, 'isi' => $isi]);
     }
 
     public function destroy(int $id): RedirectResponse

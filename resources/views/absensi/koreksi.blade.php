@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Koreksi Absensi Siswa')
+@section('title', 'Absensi per Mata Pelajaran')
 @section('content')
 <div class="card shadow-sm mb-3">
     <div class="card-body">
         <form class="row g-2" method="GET">
-            <div class="col-md-5">
+            <div class="col-md-4">
                 <label class="form-label">Kelas</label>
                 <select name="kelas_id" class="form-select" required>
                     <option value="">-- Pilih Kelas --</option>
@@ -14,11 +14,26 @@
                 </select>
             </div>
             <div class="col-md-4">
+                <label class="form-label">Mata Pelajaran</label>
+                <select name="mata_pelajaran_id" class="form-select" required>
+                    <option value="">-- Pilih Mata Pelajaran --</option>
+                    @foreach($mapelList as $m)
+                        <option value="{{ $m->id }}" @selected($mapelId == $m->id)>{{ $m->nama_mapel }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label">Tanggal</label>
                 <input type="date" name="tanggal" value="{{ $tanggal }}" class="form-control" required>
             </div>
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-2 d-flex align-items-end">
                 <button class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Tampilkan</button>
+            </div>
+            <div class="col-12">
+                <div class="form-text">
+                    Kehadiran dicatat per mata pelajaran, jadi satu siswa bisa punya beberapa catatan dalam sehari
+                    sesuai jam pelajaran yang diikutinya.
+                </div>
             </div>
         </form>
     </div>
@@ -28,8 +43,16 @@
 <form method="POST" action="{{ route('absensi.koreksi.store') }}">
     @csrf
     <input type="hidden" name="kelas_id" value="{{ $kelasId }}">
+    <input type="hidden" name="mata_pelajaran_id" value="{{ $mapelId }}">
     <input type="hidden" name="tanggal" value="{{ $tanggal }}">
     <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center justify-content-between">
+            <span class="fw-semibold">
+                {{ optional($kelasList->firstWhere('id', (int) $kelasId))->nama_rombel }} &mdash;
+                {{ optional($mapelList->firstWhere('id', (int) $mapelId))->nama_mapel }}
+            </span>
+            <span class="badge bg-primary">{{ \Illuminate\Support\Carbon::parse($tanggal)->translatedFormat('l, d F Y') }}</span>
+        </div>
         <div class="table-responsive">
             <table class="table mb-0">
                 <thead class="table-light">
@@ -63,7 +86,7 @@
         </div>
     </div>
 </form>
-@elseif($kelasId)
+@elseif($sudahDipilih)
 <div class="alert alert-info">Tidak ada siswa pada kelas tersebut.</div>
 @endif
 @endsection

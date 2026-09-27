@@ -24,6 +24,24 @@ class SiswaRombel extends Model
         'tahun_ajaran_id',
     ];
 
+    /**
+     * Id kelas/rombel tempat seorang siswa terdaftar. Bila tahun ajaran
+     * diisi, hanya penempatan pada tahun itu yang diambil — dipakai menu
+     * Tugas dan dashboard supaya keduanya menghitung tugas yang sama.
+     *
+     * @return array<int, int>
+     */
+    public static function kelasIdsSiswa(?int $siswaId, ?int $tahunAjaranId = null): array
+    {
+        if ($siswaId === null) {
+            return [];
+        }
+
+        return static::where('siswa_id', $siswaId)
+            ->when($tahunAjaranId, fn ($q) => $q->where('tahun_ajaran_id', $tahunAjaranId))
+            ->pluck('rombongan_belajar_id')
+            ->all();
+    }
     public function siswa()
     {
         return $this->belongsTo(Siswa::class);

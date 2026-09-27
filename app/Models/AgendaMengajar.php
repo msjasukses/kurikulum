@@ -19,6 +19,18 @@ class AgendaMengajar extends Model
     public const STATUS_DISETUJUI = 'Disetujui';
     public const STATUS_DITOLAK = 'Ditolak';
 
+    /** Pilihan status kehadiran siswa pada satu jam pelajaran. */
+    public const STATUS_KEHADIRAN = ['Hadir', 'Tidak Hadir', 'Sakit', 'Izin', 'Dispensasi'];
+
+    /** Warna badge tiap status, dipakai di form dan daftar agenda. */
+    public const WARNA_KEHADIRAN = [
+        'Hadir' => 'success',
+        'Tidak Hadir' => 'danger',
+        'Sakit' => 'warning text-dark',
+        'Izin' => 'info text-dark',
+        'Dispensasi' => 'secondary',
+    ];
+
     protected $fillable = [
         'guru_id',
         'mengajar_sebagai',
@@ -32,6 +44,7 @@ class AgendaMengajar extends Model
         'hadir',
         'absen',
         'siswa_absen',
+        'kehadiran_siswa',
         'modul_ajar_id',
         'materi',
         'catatan',
@@ -42,6 +55,7 @@ class AgendaMengajar extends Model
 
     protected $casts = [
         'waktu_pengisian' => 'datetime',
+        'kehadiran_siswa' => 'array',
     ];
 
     public function guru()

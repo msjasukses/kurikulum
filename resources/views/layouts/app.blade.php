@@ -119,21 +119,18 @@
             <a class="nav-link px-3 py-2 {{ request()->routeIs('ruangbelajar.tugas*') ? 'active':'' }}" href="{{ route('ruangbelajar.tugas.index') }}"><i class="bi bi-clipboard-check me-2"></i>Tugas</a>
         </div>
 
-        @unless(auth()->user()->isGuru())
         @php($open = request()->routeIs('absensi.*'))
         <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center {{ $open ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#grpAbsensi">
             <i class="bi bi-clipboard2-check me-2"></i>Absensi <i class="bi bi-chevron-down ms-auto chev"></i>
         </button>
         <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpAbsensi" data-bs-parent="#sidebarNav">
-            @can('admin')
+            {{-- Absensi dicatat per mata pelajaran, jadi guru pengampu ikut mengisinya. --}}
+            @unless(auth()->user()->isSiswa())
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('absensi.koreksi*') ? 'active':'' }}" href="{{ route('absensi.koreksi.index') }}"><i class="bi bi-pencil-square me-2"></i>Absensi per Mapel</a>
             <a class="nav-link px-3 py-2 {{ request()->routeIs('absensi.rekap-kelas*') ? 'active':'' }}" href="{{ route('absensi.rekap-kelas.index') }}"><i class="bi bi-table me-2"></i>Rekap per Kelas</a>
-            @endcan
+            @endunless
             <a class="nav-link px-3 py-2 {{ request()->routeIs('absensi.rekap-siswa*') ? 'active':'' }}" href="{{ route('absensi.rekap-siswa.index') }}"><i class="bi bi-person-lines-fill me-2"></i>Rekap per Siswa</a>
-            @can('admin')
-            <a class="nav-link px-3 py-2 {{ request()->routeIs('absensi.koreksi*') ? 'active':'' }}" href="{{ route('absensi.koreksi.index') }}"><i class="bi bi-pencil-square me-2"></i>Koreksi Absensi</a>
-            @endcan
         </div>
-        @endunless
 
         @can('admin')
         @php($open = request()->routeIs('users.*'))

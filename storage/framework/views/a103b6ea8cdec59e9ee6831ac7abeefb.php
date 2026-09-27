@@ -90,13 +90,52 @@
 </div>
 <?php endif; ?>
 
+<?php if(auth()->user()->isSiswa()): ?>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-4">
+        <div class="card shadow-sm text-center py-3 <?php echo e($ringkasanTugas['belum'] > 0 ? 'border-danger' : ''); ?>">
+            <i class="bi bi-hourglass-split fs-3 <?php echo e($ringkasanTugas['belum'] > 0 ? 'text-danger' : 'text-muted'); ?>"></i>
+            <div class="fs-4 fw-bold"><?php echo e($ringkasanTugas['belum']); ?></div>
+            <div class="text-muted small">Belum Dikumpulkan</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card shadow-sm text-center py-3">
+            <i class="bi bi-check2-circle fs-3 text-success"></i>
+            <div class="fs-4 fw-bold"><?php echo e($ringkasanTugas['dikumpulkan']); ?></div>
+            <div class="text-muted small">Sudah Dikumpulkan</div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card shadow-sm text-center py-3">
+            <i class="bi bi-patch-check fs-3 text-primary"></i>
+            <div class="fs-4 fw-bold"><?php echo e($ringkasanTugas['dinilai']); ?></div>
+            <div class="text-muted small">Sudah Dinilai</div>
+        </div>
+    </div>
+</div>
+
+<?php if($ringkasanTugas['belum'] > 0): ?>
+<div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span>
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Kamu masih punya <strong><?php echo e($ringkasanTugas['belum']); ?> tugas</strong> yang belum dikumpulkan.
+    </span>
+    <a href="<?php echo e(route('ruangbelajar.tugas.index')); ?>" class="btn btn-sm btn-warning">
+        Lihat Tugas <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+</div>
+<?php endif; ?>
+<?php endif; ?>
+
 <?php if(!auth()->user()->isAdmin()): ?>
 <div class="card shadow-sm">
     <div class="card-header bg-white">Tugas Terbaru</div>
     <div class="table-responsive">
         <table class="table mb-0">
             <thead class="table-light">
-                <tr><th>Judul</th><th>Mata Pelajaran</th><th>Kelas</th><th>Batas Akhir</th></tr>
+                <tr><th>Judul</th><th>Mata Pelajaran</th><th>Kelas</th><th>Batas Akhir</th><?php if(auth()->user()->isSiswa()): ?><th>Status</th><th class="text-end">Aksi</th><?php endif; ?></tr>
             </thead>
             <tbody>
                 <?php $__empty_1 = true; $__currentLoopData = $tugasTerbaru; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
@@ -105,9 +144,31 @@
                     <td><?php echo e($t->mataPelajaran->nama_mapel ?? '-'); ?></td>
                     <td><?php echo e($t->kelas->nama_rombel ?? '-'); ?></td>
                     <td><?php echo e(optional($t->tanggal_selesai)->translatedFormat('d M Y') ?? '-'); ?></td>
+                    <?php if(auth()->user()->isSiswa()): ?>
+                        <?php ($p = $pengumpulanSiswa->get($t->id)); ?>
+                        <td>
+                            <?php if(! $p): ?>
+                                <span class="badge bg-danger">Belum dikumpulkan</span>
+                            <?php elseif($p->sudahDinilai()): ?>
+                                <span class="badge bg-primary">Nilai <?php echo e($p->nilai); ?></span>
+                            <?php else: ?>
+                                <span class="badge <?php echo e($p->terlambat ? 'bg-warning text-dark' : 'bg-success'); ?>">
+                                    <?php echo e($p->terlambat ? 'Dikumpulkan (terlambat)' : 'Sudah dikumpulkan'); ?>
+
+                                </span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a href="<?php echo e(route('ruangbelajar.pengumpulan.form', $t->id)); ?>"
+                               class="btn btn-sm <?php echo e($p ? 'btn-outline-secondary' : 'btn-primary'); ?>">
+                                <i class="bi <?php echo e($p ? 'bi-eye' : 'bi-upload'); ?> me-1"></i><?php echo e($p ? 'Lihat' : 'Kumpulkan'); ?>
+
+                            </a>
+                        </td>
+                    <?php endif; ?>
                 </tr>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                <tr><td colspan="4" class="text-center text-muted py-3">Belum ada tugas.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-3">Belum ada tugas.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

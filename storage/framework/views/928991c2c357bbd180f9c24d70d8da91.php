@@ -119,21 +119,18 @@
             <a class="nav-link px-3 py-2 <?php echo e(request()->routeIs('ruangbelajar.tugas*') ? 'active':''); ?>" href="<?php echo e(route('ruangbelajar.tugas.index')); ?>"><i class="bi bi-clipboard-check me-2"></i>Tugas</a>
         </div>
 
-        <?php if (! (auth()->user()->isGuru())): ?>
         <?php ($open = request()->routeIs('absensi.*')); ?>
         <button class="menu-toggle nav-link px-3 py-2 d-flex align-items-center <?php echo e($open ? '' : 'collapsed'); ?>" data-bs-toggle="collapse" data-bs-target="#grpAbsensi">
             <i class="bi bi-clipboard2-check me-2"></i>Absensi <i class="bi bi-chevron-down ms-auto chev"></i>
         </button>
         <div class="collapse menu-sub <?php echo e($open ? 'show' : ''); ?>" id="grpAbsensi" data-bs-parent="#sidebarNav">
-            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('admin')): ?>
+            
+            <?php if (! (auth()->user()->isSiswa())): ?>
+            <a class="nav-link px-3 py-2 <?php echo e(request()->routeIs('absensi.koreksi*') ? 'active':''); ?>" href="<?php echo e(route('absensi.koreksi.index')); ?>"><i class="bi bi-pencil-square me-2"></i>Absensi per Mapel</a>
             <a class="nav-link px-3 py-2 <?php echo e(request()->routeIs('absensi.rekap-kelas*') ? 'active':''); ?>" href="<?php echo e(route('absensi.rekap-kelas.index')); ?>"><i class="bi bi-table me-2"></i>Rekap per Kelas</a>
             <?php endif; ?>
             <a class="nav-link px-3 py-2 <?php echo e(request()->routeIs('absensi.rekap-siswa*') ? 'active':''); ?>" href="<?php echo e(route('absensi.rekap-siswa.index')); ?>"><i class="bi bi-person-lines-fill me-2"></i>Rekap per Siswa</a>
-            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('admin')): ?>
-            <a class="nav-link px-3 py-2 <?php echo e(request()->routeIs('absensi.koreksi*') ? 'active':''); ?>" href="<?php echo e(route('absensi.koreksi.index')); ?>"><i class="bi bi-pencil-square me-2"></i>Koreksi Absensi</a>
-            <?php endif; ?>
         </div>
-        <?php endif; ?>
 
         <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('admin')): ?>
         <?php ($open = request()->routeIs('users.*')); ?>

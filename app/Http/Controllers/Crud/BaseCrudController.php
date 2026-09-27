@@ -117,6 +117,32 @@ abstract class BaseCrudController extends Controller
     }
 
     /**
+     * Tombol aksi tambahan pada setiap baris tabel, di samping tombol
+     * Ubah/Hapus. Setiap item berupa closure yang menerima baris data dan
+     * mengembalikan ['label', 'url', 'icon', 'class'] — atau null bila tombol
+     * itu tidak berlaku untuk baris tersebut.
+     */
+    protected function rowActions(): array
+    {
+        return [];
+    }
+
+    /** Susun tombol baris untuk satu item, buang yang tidak berlaku. */
+    public function rowActionsFor($item): array
+    {
+        $tombol = [];
+
+        foreach ($this->rowActions() as $aksi) {
+            $hasil = $aksi($item);
+            if ($hasil) {
+                $tombol[] = $hasil;
+            }
+        }
+
+        return $tombol;
+    }
+
+    /**
      * Dropdown filter di halaman index, di samping kotak pencarian.
      * Setiap item: [
      *   'name'    => nama parameter query (default juga jadi nama kolom),
@@ -198,6 +224,7 @@ abstract class BaseCrudController extends Controller
             'canManage' => $this->canManage(),
             'extraActions' => $this->extraActions(),
             'filters' => $this->filters(),
+            'crud' => $this,
         ]);
     }
 
@@ -211,7 +238,8 @@ abstract class BaseCrudController extends Controller
             'routeName' => $this->routeName,
             'item' => null,
             'canManage' => $this->canManage(),
-        ]);
+            'formScript' => $this->formScript(),
+        ] + $this->formData());
     }
 
     public function store(Request $request): RedirectResponse
@@ -245,7 +273,8 @@ abstract class BaseCrudController extends Controller
             'routeName' => $this->routeName,
             'item' => $item,
             'canManage' => $this->canManage(),
-        ]);
+            'formScript' => $this->formScript(),
+        ] + $this->formData());
     }
 
     public function update(Request $request, int|string $id): RedirectResponse
@@ -284,6 +313,22 @@ abstract class BaseCrudController extends Controller
 
         return redirect()->route($this->routeName.'.index')
             ->with('success', $this->title.' berhasil dihapus.');
+    }
+
+    /**
+     * Nama view berisi <script> tambahan untuk halaman form, mis. dropdown
+     * bertingkat yang isinya bergantung pada pilihan field lain. Data yang
+     * dibutuhkan script tersebut disediakan lewat formData().
+     */
+    protected function formScript(): ?string
+    {
+        return null;
+    }
+
+    /** Data tambahan yang ikut dikirim ke halaman form (dipakai formScript). */
+    protected function formData(): array
+    {
+        return [];
     }
 
     /**
@@ -394,7 +439,7 @@ abstract class BaseCrudController extends Controller
 
             // Field pilihan ganda dikirim sebagai array, jadi tiap isinya
             // divalidasi terpisah.
-            if ($field['type'] === 'checkboxes') {
+            if ($field['type'] === 'checkboxes' || ! empty($field['multiple'])) {
                 $rules[$field['name'].'.*'] = $field['itemRules'] ?? 'string|max:255';
             }
         }
@@ -408,6 +453,11 @@ abstract class BaseCrudController extends Controller
 
         foreach ($fields as $field) {
             $name = $field['name'];
+
+            // Kolom hitungan hanya untuk tampilan daftar, bukan kolom tabel.
+            if ($field['type'] === 'computed') {
+                continue;
+            }
 
             if ($field['type'] === 'file') {
                 if ($request->hasFile($name)) {

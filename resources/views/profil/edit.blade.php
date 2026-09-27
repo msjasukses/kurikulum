@@ -126,7 +126,124 @@
             </div>
         </div>
         @endif
+
+        @if($bolehAturAi)
+        {{-- ===================== Pengaturan AI ===================== --}}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <span><i class="bi bi-stars me-1"></i>Kunci API AI (Generate Modul Ajar)</span>
+                @if($user->punyaKunciAi())
+                    <span class="badge bg-success">Sudah diatur</span>
+                @else
+                    <span class="badge bg-secondary">Belum diatur</span>
+                @endif
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    Kunci ini dipakai tombol <strong>Generate Modul Ajar</strong> di menu Modul Ajar Digital,
+                    dan hanya berlaku untuk akun Anda sendiri. Kunci disimpan dalam bentuk terenkripsi serta
+                    tidak pernah ditampilkan kembali secara utuh.
+                </p>
+
+                <form method="POST" action="{{ route('profil.ai') }}">
+                    @csrf
+                    @method('PUT')
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" for="ai_provider">Penyedia AI</label>
+                            <select name="ai_provider" id="ai_provider" class="form-select @error('ai_provider') is-invalid @enderror">
+                                @foreach($penyediaAi as $kode => $info)
+                                    <option value="{{ $kode }}" @selected(old('ai_provider', $user->ai_provider) === $kode)>{{ $info['label'] }}</option>
+                                @endforeach
+                            </select>
+                            @error('ai_provider')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            <div class="form-text">
+                                Ambil kunci di:
+                                @foreach($penyediaAi as $kode => $info)
+                                    <span class="d-none js-alamat-kunci" data-penyedia="{{ $kode }}">
+                                        <a href="{{ $info['alamat_kunci'] }}" target="_blank" rel="noopener">{{ $info['alamat_kunci'] }}</a>
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" for="ai_api_key">Kunci API</label>
+                            <div class="input-group">
+                                <input type="password" name="ai_api_key" id="ai_api_key" autocomplete="off"
+                                       class="form-control @error('ai_api_key') is-invalid @enderror"
+                                       placeholder="{{ $user->punyaKunciAi() ? 'Tersimpan: '.$user->petunjukKunciAi() : 'Tempelkan kunci API di sini' }}">
+                                <button type="button" class="btn btn-outline-secondary" id="lihat-kunci-ai"
+                                        aria-label="Tampilkan kunci" title="Tampilkan kunci">
+                                    <i class="bi bi-eye" id="ikon-kunci-ai"></i>
+                                </button>
+                            </div>
+                            @error('ai_api_key')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            @if($user->punyaKunciAi())
+                                <div class="form-text">Kosongkan bila tidak ingin mengganti kunci yang tersimpan.</div>
+                            @endif
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" for="ai_model">Model <span class="text-muted">(opsional)</span></label>
+                            <input type="text" name="ai_model" id="ai_model" value="{{ old('ai_model', $user->ai_model) }}"
+                                   class="form-control @error('ai_model') is-invalid @enderror">
+                            @error('ai_model')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            <div class="form-text">
+                                @foreach($penyediaAi as $kode => $info)
+                                    <span class="d-none js-contoh-model" data-penyedia="{{ $kode }}">
+                                        Kosongkan untuk memakai <strong>{{ $info['model_bawaan'] }}</strong>.
+                                        Pilihan lain: {{ $info['contoh_model'] }}.
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan Pengaturan AI</button>
+                        @if($user->punyaKunciAi())
+                            <button name="hapus_kunci" value="1" class="btn btn-outline-danger"
+                                    onclick="return confirm('Hapus kunci API AI dari akun ini?')">
+                                <i class="bi bi-trash me-1"></i>Hapus Kunci
+                            </button>
+                        @endif
+                    </div>
+                </form>
+            </div>
+        </div>
+        @endif
     </div>
 </div>
+
+@if($bolehAturAi)
+@push('scripts')
+<script>
+    // Petunjuk (alamat kunci & contoh model) mengikuti penyedia yang dipilih,
+    // plus tombol mata untuk memeriksa kunci yang sedang diketik.
+    (function () {
+        var $penyedia = $('#ai_provider');
+
+        function segarkanPetunjuk() {
+            var kode = $penyedia.val();
+            $('.js-alamat-kunci, .js-contoh-model').each(function () {
+                $(this).toggleClass('d-none', $(this).data('penyedia') !== kode);
+            });
+        }
+
+        $penyedia.on('change', segarkanPetunjuk);
+        segarkanPetunjuk();
+
+        $('#lihat-kunci-ai').on('click', function () {
+            var $kunci = $('#ai_api_key');
+            var tampil = $kunci.attr('type') === 'password';
+            $kunci.attr('type', tampil ? 'text' : 'password');
+            $('#ikon-kunci-ai').toggleClass('bi-eye', !tampil).toggleClass('bi-eye-slash', tampil);
+            $(this).attr('aria-label', tampil ? 'Sembunyikan kunci' : 'Tampilkan kunci')
+                   .attr('title', tampil ? 'Sembunyikan kunci' : 'Tampilkan kunci');
+            $kunci.trigger('focus');
+        });
+    })();
+</script>
+@endpush
+@endif
 
 @endsection

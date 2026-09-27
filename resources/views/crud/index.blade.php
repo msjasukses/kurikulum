@@ -44,7 +44,7 @@
                             <th>{{ $field['label'] }}</th>
                         @endif
                     @endforeach
-                    <th style="width:120px;" class="text-end">Aksi</th>
+                    <th class="text-end">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,12 +55,23 @@
                             @if($field['list'] ?? true)
                                 <td>
                                     @php
-                                        $raw = $item->{$field['name']};
+                                        $raw = $field['type'] === 'computed' ? null : $item->{$field['name']};
                                         $val = isset($field['relation'])
                                             ? data_get($item, $field['relation']['method'].'.'.$field['relation']['display'])
                                             : ((isset($field['options']) && is_scalar($raw)) ? ($field['options'][$raw] ?? $raw) : $raw);
                                     @endphp
-                                    @if($field['type'] === 'file' && $item->{$field['name']})
+                                    @if($field['type'] === 'computed')
+                                        @php $isi = isset($field['render']) ? ($field['render'])($item) : null; @endphp
+                                        @if(is_array($isi))
+                                            @forelse($isi as $badge)
+                                                <span class="badge {{ $badge['kelas'] ?? 'bg-secondary' }} me-1">{{ $badge['teks'] }}</span>
+                                            @empty
+                                                <span class="text-muted small">-</span>
+                                            @endforelse
+                                        @else
+                                            {{ $isi ?: '-' }}
+                                        @endif
+                                    @elseif($field['type'] === 'file' && $item->{$field['name']})
                                         <a href="{{ Storage::url($item->{$field['name']}) }}" target="_blank">Lihat File</a>
                                     @elseif($field['type'] === 'checkbox')
                                         {{ $item->{$field['name']} ? 'Ya' : 'Tidak' }}
@@ -75,14 +86,21 @@
                                 </td>
                             @endif
                         @endforeach
-                        <td class="text-end">
+                        <td class="text-end text-nowrap">
+                            @php $aksiBaris = ($crud ?? null) ? $crud->rowActionsFor($item) : []; @endphp
+                            @foreach($aksiBaris as $aksi)
+                            <a href="{{ $aksi['url'] }}" class="btn btn-sm {{ $aksi['class'] ?? 'btn-outline-primary' }}" title="{{ $aksi['label'] }}"
+                               @if(!empty($aksi['target'])) target="{{ $aksi['target'] }}" rel="noopener" @endif>
+                                @if(!empty($aksi['icon']))<i class="bi {{ $aksi['icon'] }} me-1"></i>@endif{{ $aksi['label'] }}
+                            </a>
+                            @endforeach
                             @if($canManage)
                             <a href="{{ route($routeName.'.edit', $item->id) }}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
                             <form action="{{ route($routeName.'.destroy', $item->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus data ini?')">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                             </form>
-                            @else
+                            @elseif(empty($aksiBaris))
                                 <span class="text-muted small">Lihat saja</span>
                             @endif
                         </td>

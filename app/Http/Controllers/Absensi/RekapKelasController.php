@@ -2,24 +2,41 @@
 
 namespace App\Http\Controllers\Absensi;
 
+use App\Http\Controllers\Concerns\FilterPenugasanGuru;
 use App\Http\Controllers\Controller;
 use App\Models\AbsensiSiswa;
 use App\Models\Kelas;
+use App\Models\MataPelajaran;
 use App\Models\Siswa;
 use App\Support\TahunAjaranTerpilih;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+/**
+ * Rekap absensi satu kelas pada rentang tanggal. Bisa disaring per mata
+ * pelajaran; bila mata pelajaran dikosongkan, yang dihitung adalah seluruh
+ * pertemuan semua mata pelajaran, dengan rincian per mapel di kolom terakhir.
+ */
 class RekapKelasController extends Controller
 {
+    use FilterPenugasanGuru;
+
     public function index(Request $request): View
     {
         // Daftar kelas mengikuti tahun ajaran yang dipilih di topbar.
         $tahunAjaranId = app(TahunAjaranTerpilih::class)->id();
+        $kelasIds = $this->kelasIdsGuru();
+        $mapelIds = $this->mapelIdsGuru();
 
         $kelasList = Kelas::when($tahunAjaranId, fn ($q) => $q->where('tahun_ajaran_id', $tahunAjaranId))
+            ->when($kelasIds !== null, fn ($q) => $q->whereIn('id', $kelasIds))
             ->orderBy('nama_rombel')->get();
+
+        $mapelList = MataPelajaran::when($mapelIds !== null, fn ($q) => $q->whereIn('id', $mapelIds))
+            ->orderBy('nama_mapel')->get();
+
         $kelasId = $request->input('kelas_id');
+        $mapelId = $request->input('mata_pelajaran_id');
         $tanggalMulai = $request->input('tanggal_mulai');
         $tanggalSelesai = $request->input('tanggal_selesai');
 
@@ -32,13 +49,26 @@ class RekapKelasController extends Controller
                 ->orderBy('nama_siswa')
                 ->get();
 
-            $absensi = AbsensiSiswa::where('kelas_id', $kelasId)
+            $absensi = AbsensiSiswa::with('mataPelajaran')
+                ->where('kelas_id', $kelasId)
+                ->when($mapelId, fn ($q) => $q->where('mata_pelajaran_id', $mapelId))
                 ->whereBetween('tanggal', [$tanggalMulai, $tanggalSelesai])
                 ->get()
                 ->groupBy('siswa_id');
 
             foreach ($siswaList as $siswa) {
                 $records = $absensi->get($siswa->id, collect());
+
+                // Rincian per mata pelajaran, mis. "Matematika: 8/10 hadir".
+                $perMapel = $records->groupBy('mata_pelajaran_id')
+                    ->map(fn ($baris) => [
+                        'nama' => optional($baris->first()->mataPelajaran)->nama_mapel ?? 'Tanpa mapel',
+                        'hadir' => $baris->where('status', 'Hadir')->count(),
+                        'total' => $baris->count(),
+                    ])
+                    ->sortBy('nama')
+                    ->values();
+
                 $rekap->push([
                     'siswa' => $siswa,
                     'hadir' => $records->where('status', 'Hadir')->count(),
@@ -46,13 +76,16 @@ class RekapKelasController extends Controller
                     'sakit' => $records->where('status', 'Sakit')->count(),
                     'alpa' => $records->where('status', 'Alpa')->count(),
                     'total' => $records->count(),
+                    'per_mapel' => $perMapel,
                 ]);
             }
         }
 
         return view('absensi.rekap-kelas', [
             'kelasList' => $kelasList,
+            'mapelList' => $mapelList,
             'kelasId' => $kelasId,
+            'mapelId' => $mapelId,
             'tanggalMulai' => $tanggalMulai,
             'tanggalSelesai' => $tanggalSelesai,
             'rekap' => $rekap,

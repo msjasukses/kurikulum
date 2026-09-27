@@ -11,6 +11,13 @@ class JamMengajarController extends BaseCrudController
     protected string $routeName = 'setting.jam-mengajar';
     protected string $title = 'Jam Mengajar';
 
+    protected function extraActions(): array
+    {
+        return [
+            ['label' => 'Import Excel', 'url' => route('setting.jam-mengajar-import.form'), 'icon' => 'bi-upload'],
+        ];
+    }
+
     protected function fields(): array
     {
         return [

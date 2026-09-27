@@ -24,18 +24,38 @@ class User extends Authenticatable
         'guru_id',
         'siswa_id',
         'aktif',
+        'ai_provider',
+        'ai_api_key',
+        'ai_model',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'ai_api_key',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'aktif' => 'boolean',
+        // Kunci API AI disimpan terenkripsi memakai APP_KEY.
+        'ai_api_key' => 'encrypted',
     ];
+
+    /** Akun ini punya kunci API AI sendiri. */
+    public function punyaKunciAi(): bool
+    {
+        return filled($this->ai_api_key);
+    }
+
+    /** Empat huruf terakhir kunci untuk ditampilkan di halaman profil. */
+    public function petunjukKunciAi(): ?string
+    {
+        $kunci = (string) $this->ai_api_key;
+
+        return $kunci === '' ? null : str_repeat('•', 8).substr($kunci, -4);
+    }
 
     public function pegawai()
     {

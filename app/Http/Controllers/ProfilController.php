@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\GuruMapel;
 use App\Models\Kelas;
 use App\Models\User;
+use App\Services\Ai\PengaturanAi;
 use App\Support\TahunAjaranTerpilih;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,6 +36,9 @@ class ProfilController extends Controller
             'user' => $user,
             'akunLokal' => $this->akunLokal($user),
             'detail' => $this->detailProfil($user),
+            // Pengaturan AI hanya untuk admin & guru (pemakai Modul Ajar).
+            'bolehAturAi' => ! $user->isSiswa(),
+            'penyediaAi' => PengaturanAi::pilihan(),
         ]);
     }
 
@@ -81,6 +85,45 @@ class ProfilController extends Controller
         return redirect()->route('profil.edit')->with('success', 'Kata sandi berhasil diubah.');
     }
 
+    /**
+     * Simpan kunci API AI milik akun sendiri (dipakai tombol Generate Modul
+     * Ajar). Kunci disimpan terenkripsi dan tidak pernah ditampilkan lagi
+     * secara utuh — halaman profil hanya menampilkan empat huruf terakhirnya.
+     */
+    public function updateAi(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_if($user->isSiswa(), 403, 'Pengaturan AI hanya untuk admin dan guru.');
+
+        // Tombol "Hapus Kunci" — kosongkan seluruh pengaturan AI akun ini.
+        if ($request->boolean('hapus_kunci')) {
+            $user->forceFill(['ai_provider' => null, 'ai_api_key' => null, 'ai_model' => null])->save();
+
+            return redirect()->route('profil.edit')->with('success', 'Kunci API AI berhasil dihapus.');
+        }
+
+        $data = $request->validate([
+            'ai_provider' => ['required', Rule::in(array_keys(PengaturanAi::PENYEDIA))],
+            'ai_api_key' => [$user->punyaKunciAi() ? 'nullable' : 'required', 'string', 'max:500'],
+            'ai_model' => ['nullable', 'string', 'max:100'],
+        ], [], [
+            'ai_provider' => 'Penyedia AI',
+            'ai_api_key' => 'Kunci API',
+            'ai_model' => 'Model',
+        ]);
+
+        $user->ai_provider = $data['ai_provider'];
+        $user->ai_model = filled($data['ai_model'] ?? null) ? trim($data['ai_model']) : null;
+
+        // Kunci dikosongkan berarti "biarkan kunci lama" — bukan hapus.
+        if (filled($data['ai_api_key'] ?? null)) {
+            $user->ai_api_key = trim($data['ai_api_key']);
+        }
+
+        $user->save();
+
+        return redirect()->route('profil.edit')->with('success', 'Pengaturan AI berhasil disimpan.');
+    }
     /**
      * Akun lokal = dibuat lewat Manajemen User, bukan hasil sinkronisasi
      * login datacenter (guru via NIP / siswa via NISN).

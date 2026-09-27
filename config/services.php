@@ -4,6 +4,16 @@ return [
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
+    /*
+    | Kunci API Anthropic (Claude) untuk fitur Generate Modul Ajar dengan AI.
+    | Isi ANTHROPIC_API_KEY di file .env; bila kosong, tombol Generate
+    | otomatis memakai kerangka modul bawaan aplikasi (tanpa AI).
+    */
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-opus-5'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

@@ -44,7 +44,7 @@
                             <th><?php echo e($field['label']); ?></th>
                         <?php endif; ?>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    <th style="width:120px;" class="text-end">Aksi</th>
+                    <th class="text-end">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,12 +55,24 @@
                             <?php if($field['list'] ?? true): ?>
                                 <td>
                                     <?php
-                                        $raw = $item->{$field['name']};
+                                        $raw = $field['type'] === 'computed' ? null : $item->{$field['name']};
                                         $val = isset($field['relation'])
                                             ? data_get($item, $field['relation']['method'].'.'.$field['relation']['display'])
                                             : ((isset($field['options']) && is_scalar($raw)) ? ($field['options'][$raw] ?? $raw) : $raw);
                                     ?>
-                                    <?php if($field['type'] === 'file' && $item->{$field['name']}): ?>
+                                    <?php if($field['type'] === 'computed'): ?>
+                                        <?php $isi = isset($field['render']) ? ($field['render'])($item) : null; ?>
+                                        <?php if(is_array($isi)): ?>
+                                            <?php $__empty_2 = true; $__currentLoopData = $isi; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $badge): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_2 = false; ?>
+                                                <span class="badge <?php echo e($badge['kelas'] ?? 'bg-secondary'); ?> me-1"><?php echo e($badge['teks']); ?></span>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_2): ?>
+                                                <span class="text-muted small">-</span>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <?php echo e($isi ?: '-'); ?>
+
+                                        <?php endif; ?>
+                                    <?php elseif($field['type'] === 'file' && $item->{$field['name']}): ?>
                                         <a href="<?php echo e(Storage::url($item->{$field['name']})); ?>" target="_blank">Lihat File</a>
                                     <?php elseif($field['type'] === 'checkbox'): ?>
                                         <?php echo e($item->{$field['name']} ? 'Ya' : 'Tidak'); ?>
@@ -79,14 +91,22 @@
                                 </td>
                             <?php endif; ?>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                        <td class="text-end">
+                        <td class="text-end text-nowrap">
+                            <?php $aksiBaris = ($crud ?? null) ? $crud->rowActionsFor($item) : []; ?>
+                            <?php $__currentLoopData = $aksiBaris; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $aksi): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <a href="<?php echo e($aksi['url']); ?>" class="btn btn-sm <?php echo e($aksi['class'] ?? 'btn-outline-primary'); ?>" title="<?php echo e($aksi['label']); ?>"
+                               <?php if(!empty($aksi['target'])): ?> target="<?php echo e($aksi['target']); ?>" rel="noopener" <?php endif; ?>>
+                                <?php if(!empty($aksi['icon'])): ?><i class="bi <?php echo e($aksi['icon']); ?> me-1"></i><?php endif; ?><?php echo e($aksi['label']); ?>
+
+                            </a>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             <?php if($canManage): ?>
                             <a href="<?php echo e(route($routeName.'.edit', $item->id)); ?>" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
                             <form action="<?php echo e(route($routeName.'.destroy', $item->id)); ?>" method="POST" class="d-inline" onsubmit="return confirm('Hapus data ini?')">
                                 <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>
                                 <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                             </form>
-                            <?php else: ?>
+                            <?php elseif(empty($aksiBaris)): ?>
                                 <span class="text-muted small">Lihat saja</span>
                             <?php endif; ?>
                         </td>

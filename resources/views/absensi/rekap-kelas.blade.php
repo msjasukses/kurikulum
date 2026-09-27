@@ -4,7 +4,7 @@
 <div class="card shadow-sm mb-3">
     <div class="card-body">
         <form class="row g-2" method="GET">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Kelas</label>
                 <select name="kelas_id" class="form-select" required>
                     <option value="">-- Pilih Kelas --</option>
@@ -14,10 +14,19 @@
                 </select>
             </div>
             <div class="col-md-3">
+                <label class="form-label">Mata Pelajaran</label>
+                <select name="mata_pelajaran_id" class="form-select">
+                    <option value="">Semua Mata Pelajaran</option>
+                    @foreach($mapelList as $m)
+                        <option value="{{ $m->id }}" @selected($mapelId == $m->id)>{{ $m->nama_mapel }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label">Dari Tanggal</label>
                 <input type="date" name="tanggal_mulai" value="{{ $tanggalMulai }}" class="form-control" required>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Sampai Tanggal</label>
                 <input type="date" name="tanggal_selesai" value="{{ $tanggalSelesai }}" class="form-control" required>
             </div>
@@ -30,10 +39,16 @@
 
 @if($rekap->isNotEmpty())
 <div class="card shadow-sm">
+    <div class="card-header bg-white">
+        {{ $mapelId ? 'Mata pelajaran: '.optional($mapelList->firstWhere('id', (int) $mapelId))->nama_mapel : 'Seluruh mata pelajaran' }}
+    </div>
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead class="table-light">
-                <tr><th>#</th><th>Nama Siswa</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>Total</th></tr>
+                <tr>
+                    <th>#</th><th>Nama Siswa</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>Total</th>
+                    @unless($mapelId)<th>Rincian per Mata Pelajaran</th>@endunless
+                </tr>
             </thead>
             <tbody>
                 @foreach($rekap as $i => $r)
@@ -45,6 +60,15 @@
                     <td>{{ $r['sakit'] }}</td>
                     <td>{{ $r['alpa'] }}</td>
                     <td>{{ $r['total'] }}</td>
+                    @unless($mapelId)
+                    <td>
+                        @forelse($r['per_mapel'] as $m)
+                            <span class="badge bg-light text-dark border me-1">{{ $m['nama'] }}: {{ $m['hadir'] }}/{{ $m['total'] }} hadir</span>
+                        @empty
+                            <span class="text-muted small">-</span>
+                        @endforelse
+                    </td>
+                    @endunless
                 </tr>
                 @endforeach
             </tbody>

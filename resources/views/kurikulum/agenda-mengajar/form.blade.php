@@ -83,9 +83,10 @@
                             <select name="kelas_id" id="kelas_id" class="form-select" required>
                                 <option value="">-- Pilih Kelas --</option>
                                 @foreach($kelasList as $k)
+                                    @php($tahunLain = $tahunAktif && $k->tahun_ajaran_id !== $tahunAktif->id)
                                     <option value="{{ $k->id }}" data-siswa="{{ $siswaPerKelas[$k->id] ?? 0 }}"
                                         @selected((string) old('kelas_id', optional($item)->kelas_id) === (string) $k->id)>
-                                        {{ $k->nama_rombel }}
+                                        {{ $k->nama_rombel }}@if($tahunLain) (T.A. {{ optional($k->tahunAjaran)->nama_tahun_ajaran }})@endif
                                     </option>
                                 @endforeach
                             </select>
@@ -108,7 +109,7 @@
                         </div>
                     </div>
 
-                    <div class="row g-2 text-center mb-3">
+                    <div class="row g-2 text-center mb-2">
                         <div class="col-4">
                             <div class="border rounded p-2 bg-light">
                                 <div class="small text-muted">Total Murid</div>
@@ -120,28 +121,32 @@
                         <div class="col-4">
                             <div class="border rounded p-2 bg-light">
                                 <div class="small text-muted">Hadir</div>
-                                <input type="number" name="hadir" id="hadir" min="0" required readonly
-                                       class="form-control form-control-sm text-center fw-bold border-0 bg-light text-success"
-                                       value="{{ old('hadir', optional($item)->hadir ?? 0) }}">
+                                <div id="hadir" class="fw-bold text-success">{{ old('hadir', optional($item)->hadir ?? 0) }}</div>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="border rounded p-2 bg-light">
                                 <div class="small text-muted">Tidak Hadir</div>
-                                <input type="number" name="absen" id="absen" min="0" required readonly
-                                       class="form-control form-control-sm text-center fw-bold border-0 bg-light text-danger"
-                                       value="{{ old('absen', optional($item)->absen ?? 0) }}">
+                                <div id="absen" class="fw-bold text-danger">{{ old('absen', optional($item)->absen ?? 0) }}</div>
                             </div>
                         </div>
                     </div>
 
+                    <div id="rincian_status" class="mb-3 small text-muted"></div>
+
                     <div class="mb-3">
-                        <label class="form-label">Konfirmasi Siswa (Daftar Tidak Hadir)</label>
-                        <div id="daftar_siswa" class="border rounded p-2" style="max-height:180px; overflow-y:auto;">
-                            <div class="text-muted small">Pilih kelas dulu untuk menampilkan daftar siswa.</div>
+                        <label class="form-label">Konfirmasi Siswa (Kehadiran per Siswa)</label>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-success" id="tandai_hadir">
+                                <i class="bi bi-check2-all me-1"></i>Tandai semua hadir
+                            </button>
                         </div>
-                        <div class="form-text">Centang siswa yang tidak hadir; jumlah Hadir/Tidak Hadir dihitung otomatis.</div>
-                        <input type="hidden" name="siswa_absen" id="siswa_absen" value="{{ old('siswa_absen', optional($item)->siswa_absen) }}">
+                        <div id="daftar_siswa" class="border rounded p-2" style="max-height:320px; overflow-y:auto;">
+                            <div class="text-muted small">Pilih jam mengajar atau kelas dulu untuk menampilkan daftar siswa.</div>
+                        </div>
+                        <div class="form-text">
+                            Status tiap siswa: {{ implode(', ', $statusKehadiran) }}. Jumlah Hadir/Tidak Hadir dihitung otomatis.
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -198,89 +203,130 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
-(function () {
-    // Nama siswa per kelas (tahun ajaran aktif) untuk checkbox tidak hadir.
-    const siswaPerKelas = @json($siswaPerKelasNama);
+// Dijalankan setelah jQuery & Select2 siap (lihat layouts/app.blade.php),
+// supaya tampilan dropdown ikut berubah saat diisi otomatis.
+$(function () {
+    var SISWA_PER_KELAS = @json($siswaPerKelasNama);
+    var STATUS = @json($statusKehadiran);
+    var WARNA = @json(App\Models\AgendaMengajar::WARNA_KEHADIRAN);
 
-    const jadwal = document.getElementById('jadwal_hari_ini');
-    const guru = document.getElementById('guru_id');
-    const jamKe = document.getElementById('jam_ke');
-    const jumlahJam = document.getElementById('jumlah_jam');
-    const kelas = document.getElementById('kelas_id');
-    const mapel = document.getElementById('mata_pelajaran_id');
-    const jumlahSiswa = document.getElementById('jumlah_siswa');
-    const hadir = document.getElementById('hadir');
-    const absen = document.getElementById('absen');
-    const daftarSiswa = document.getElementById('daftar_siswa');
-    const siswaAbsen = document.getElementById('siswa_absen');
-    const modul = document.getElementById('modul_ajar_id');
-    const materi = document.getElementById('materi');
+    var $jadwal = $('#jadwal_hari_ini');
+    var $guru = $('#guru_id');
+    var $jamKe = $('#jam_ke');
+    var $kelas = $('#kelas_id');
+    var $mapel = $('#mata_pelajaran_id');
+    var $jumlahSiswa = $('#jumlah_siswa');
+    var $daftar = $('#daftar_siswa');
+    var $rincian = $('#rincian_status');
+    var $modul = $('#modul_ajar_id');
+    var $materi = $('#materi');
 
-    // Nilai tersimpan (mode edit / old input) supaya checkbox ikut tercentang.
-    const absenTersimpan = (siswaAbsen.value || '').split(',').map(s => s.replace(/\s*\(Alpa\)\s*$/i, '').trim()).filter(Boolean);
+    // Status tersimpan (mode ubah / input yang gagal validasi).
+    @php($tersimpan = old('kehadiran', collect(optional($item)->kehadiran_siswa ?? [])->pluck('status', 'siswa_id')->all()))
+    var statusTersimpan = @json((object) $tersimpan);
+
+    function aman(teks) {
+        return $('<div>').text(teks == null ? '' : teks).html();
+    }
+
+    /** Isi nilai select lalu segarkan tampilan Select2-nya. */
+    function isiSelect($el, nilai) {
+        if (nilai === undefined || nilai === null || nilai === '') {
+            return;
+        }
+        $el.val(String(nilai)).trigger('change.select2');
+    }
 
     function hitung() {
-        const dicentang = daftarSiswa.querySelectorAll('input[type=checkbox]:checked');
-        absen.value = dicentang.length;
-        hadir.value = Math.max((parseInt(jumlahSiswa.value) || 0) - dicentang.length, 0);
-        siswaAbsen.value = Array.from(dicentang).map(c => c.value + ' (Alpa)').join(', ');
+        var jumlah = {};
+        STATUS.forEach(function (st) { jumlah[st] = 0; });
+
+        var $status = $daftar.find('select.js-status');
+        $status.each(function () {
+            var nilai = $(this).val();
+            if (jumlah[nilai] !== undefined) { jumlah[nilai]++; }
+        });
+
+        if ($status.length) {
+            $jumlahSiswa.val($status.length);
+            $('#hadir').text(jumlah['Hadir']);
+            $('#absen').text($status.length - jumlah['Hadir']);
+        }
+
+        $rincian.html(STATUS.filter(function (st) { return st !== 'Hadir' && jumlah[st] > 0; })
+            .map(function (st) {
+                return '<span class="badge bg-' + (WARNA[st] || 'secondary') + ' me-1">' + st + ': ' + jumlah[st] + '</span>';
+            }).join(''));
     }
 
     function tampilkanSiswa() {
-        const namaList = siswaPerKelas[kelas.value] || [];
-        if (!kelas.value || namaList.length === 0) {
-            daftarSiswa.innerHTML = '<div class="text-muted small">' + (kelas.value ? 'Belum ada data siswa untuk kelas ini.' : 'Pilih kelas dulu untuk menampilkan daftar siswa.') + '</div>';
-            hitung();
+        var daftar = SISWA_PER_KELAS[$kelas.val()] || [];
+
+        if (! $kelas.val() || ! daftar.length) {
+            $daftar.html('<div class="text-muted small">' +
+                ($kelas.val() ? 'Belum ada data siswa untuk kelas ini.' : 'Pilih jam mengajar atau kelas dulu untuk menampilkan daftar siswa.') +
+                '</div>');
+            $rincian.empty();
             return;
         }
-        daftarSiswa.innerHTML = namaList.map(function (nama, i) {
-            const checked = absenTersimpan.includes(nama) ? 'checked' : '';
-            return '<div class="form-check"><input class="form-check-input" type="checkbox" id="s' + i + '" value="' + nama.replace(/"/g, '&quot;') + '" ' + checked + '>' +
-                   '<label class="form-check-label small" for="s' + i + '">' + nama + '</label></div>';
-        }).join('');
-        daftarSiswa.querySelectorAll('input').forEach(c => c.addEventListener('change', hitung));
+
+        $daftar.html(daftar.map(function (siswa, i) {
+            var status = statusTersimpan[siswa.id] || 'Hadir';
+            var opsi = STATUS.map(function (st) {
+                return '<option value="' + st + '"' + (st === status ? ' selected' : '') + '>' + st + '</option>';
+            }).join('');
+
+            return '<div class="d-flex align-items-center gap-2 py-1' + (i ? ' border-top' : '') + '">' +
+                   '<span class="small flex-grow-1">' + (i + 1) + '. ' + aman(siswa.nama) + '</span>' +
+                   '<input type="hidden" name="kehadiran_nama[' + siswa.id + ']" value="' + aman(siswa.nama) + '">' +
+                   '<select name="kehadiran[' + siswa.id + ']" class="form-select form-select-sm js-status" style="width:auto;">' + opsi + '</select>' +
+                   '</div>';
+        }).join(''));
+
+        $daftar.find('select.js-status').on('change', hitung);
         hitung();
     }
 
-    function isiJumlahSiswa() {
-        const opt = kelas.selectedOptions[0];
-        if (opt && opt.dataset.siswa !== undefined) jumlahSiswa.value = opt.dataset.siswa;
-    }
-
-    // Filter dropdown jadwal sesuai guru terpilih.
+    /** Daftar jadwal disaring mengikuti guru yang dipilih. */
     function filterJadwal() {
-        Array.from(jadwal.options).forEach(function (opt) {
-            if (!opt.value) return;
-            opt.hidden = !!guru.value && opt.dataset.guru !== guru.value;
+        $jadwal.find('option').each(function () {
+            if (! this.value) { return; }
+            this.hidden = !! $guru.val() && this.dataset.guru !== $guru.val();
         });
     }
 
-    jadwal.addEventListener('change', function () {
-        const opt = jadwal.selectedOptions[0];
-        if (!opt || !opt.value) return;
-        if (opt.dataset.guru && !guru.value) guru.value = opt.dataset.guru;
-        if (opt.dataset.jamKe) jamKe.value = opt.dataset.jamKe;
-        if (opt.dataset.kelas) kelas.value = opt.dataset.kelas;
-        if (opt.dataset.mapel) mapel.value = opt.dataset.mapel;
-        jumlahJam.value = 1;
-        isiJumlahSiswa();
+    // Pilih jam mengajar -> isi otomatis guru, jam ke, kelas, mapel, dan daftar siswa.
+    $jadwal.on('change', function () {
+        var opt = this.selectedOptions[0];
+        if (! opt || ! opt.value) { return; }
+
+        if (opt.dataset.guru && ! $guru.val()) { isiSelect($guru, opt.dataset.guru); }
+        if (opt.dataset.jamKe) { $jamKe.val(opt.dataset.jamKe); }
+        isiSelect($kelas, opt.dataset.kelas);
+        isiSelect($mapel, opt.dataset.mapel);
+
         tampilkanSiswa();
     });
 
-    guru.addEventListener('change', filterJadwal);
-    kelas.addEventListener('change', function () { isiJumlahSiswa(); tampilkanSiswa(); });
-    jumlahSiswa.addEventListener('input', hitung);
+    $guru.on('change', filterJadwal);
+    $kelas.on('change', tampilkanSiswa);
 
-    modul.addEventListener('change', function () {
-        const opt = modul.selectedOptions[0];
-        if (opt && opt.dataset.judul && !materi.value.trim()) materi.value = opt.dataset.judul;
+    $('#tandai_hadir').on('click', function () {
+        $daftar.find('select.js-status').val('Hadir');
+        hitung();
+    });
+
+    $modul.on('change', function () {
+        var opt = this.selectedOptions[0];
+        if (opt && opt.dataset.judul && ! $materi.val().trim()) { $materi.val(opt.dataset.judul); }
     });
 
     // Photo: dua tombol (Kamera/Galeri) memakai satu name="photo" — sinkronkan.
-    const fotoKamera = document.getElementById('photo_kamera');
-    const fotoGaleri = document.getElementById('photo_galeri');
-    const fotoNama = document.getElementById('photo_nama');
+    var fotoKamera = document.getElementById('photo_kamera');
+    var fotoGaleri = document.getElementById('photo_galeri');
+    var fotoNama = document.getElementById('photo_nama');
     fotoGaleri.addEventListener('change', function () {
         if (fotoGaleri.files.length) {
             fotoKamera.files = fotoGaleri.files;
@@ -288,13 +334,13 @@
         }
     });
     fotoKamera.addEventListener('change', function () {
-        if (fotoKamera.files.length) fotoNama.textContent = fotoKamera.files[0].name;
+        if (fotoKamera.files.length) { fotoNama.textContent = fotoKamera.files[0].name; }
     });
 
-    // Inisialisasi saat halaman dibuka (mode edit / gagal validasi).
     filterJadwal();
-    if (kelas.value) tampilkanSiswa();
-})();
+    tampilkanSiswa();
+});
 </script>
+@endpush
 
 @endsection

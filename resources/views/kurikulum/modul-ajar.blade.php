@@ -206,6 +206,15 @@
         }
     }
 
+    function tulisHtml(id, html) {
+        var ed = editor(id);
+        if (ed) {
+            ed.setContent(html || '');
+        } else {
+            $('#' + id).val(html || '');
+        }
+    }
+
     /** Teks hasil generate (per baris) diubah jadi paragraf HTML untuk editor. */
     function keHtml(teks) {
         return (teks || '').split('\n').map(function (baris) {
@@ -282,8 +291,8 @@
         }
     }
 
-    // ============ Generate isi modul dari data yang sudah dipilih ============
-    function generateModul() {
+    // ============ Kerangka modul bawaan (dipakai bila AI tidak tersedia) ============
+    function generateLokal(diamDiam) {
         var judul = $('#judul').val() || '(judul materi)';
         var mapel = $('#mapel option:selected').text() || '(mapel)';
         var tingkat = $('#tingkat option:selected').text() || '(tingkat)';
@@ -353,13 +362,71 @@
                 '3. (Soal penalaran/HOTS)'
         };
 
-        var adaIsi = Object.keys(isi).some(function (k) { return ambilIsi(k).trim() !== ''; });
-        if (adaIsi && !confirm('Beberapa bagian sudah terisi. Timpa dengan hasil generate?')) {
+        if (! diamDiam && ! konfirmasiTimpa()) {
             return;
         }
         Object.keys(isi).forEach(function (k) { tulisIsi(k, isi[k]); });
     }
 
+    // ============ Generate isi modul lewat AI (Claude) ============
+    function konfirmasiTimpa() {
+        var $editor = $('#form-modul textarea.editor-html');
+        var adaIsi = $editor.toArray().some(function (el) { return ambilIsi(el.id).trim() !== ''; });
+
+        return ! adaIsi || confirm('Beberapa bagian sudah terisi. Timpa dengan hasil generate?');
+    }
+
+    function generateModul() {
+        if (! $('#mapel').val() || ! $('#tingkat').val()) {
+            alert('Pilih Mata Pelajaran dan Tingkat terlebih dahulu.');
+            return;
+        }
+        if (! $('#judul').val().trim()) {
+            alert('Isi Judul Materi terlebih dahulu supaya isi modul sesuai materinya.');
+            $('#judul').trigger('focus');
+            return;
+        }
+        if (! konfirmasiTimpa()) {
+            return;
+        }
+
+        var $tombol = $('#btn-generate');
+        var labelAsli = $tombol.html();
+        $tombol.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Menyusun modul dengan AI...');
+
+        $.ajax({
+            url: '{{ route('kurikulum.modul-ajar.generate') }}',
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': $('#form-modul input[name="_token"]').val() },
+            data: {
+                mata_pelajaran_id: $('#mapel').val(),
+                tingkat_kelas_id: $('#tingkat').val(),
+                judul: $('#judul').val(),
+                jumlah_jam: $('#jumlah_jam').val(),
+                pertemuan_ke: $('#pertemuan_ke').val(),
+                semester: $('[name="semester"]').val(),
+                pemetaan_cp_tp_atp_id: $('#pilih-atp').val(),
+                capaian_pembelajaran: $('#pilih-cp').val(),
+                tujuan_pembelajaran: $('#pilih-tp').val()
+            }
+        }).done(function (res) {
+            if (res && res.tersedia === false) {
+                // Kunci API belum diatur — pakai kerangka bawaan aplikasi.
+                generateLokal(true);
+                alert(res.pesan);
+                return;
+            }
+            Object.keys(res.isi || {}).forEach(function (k) { tulisHtml(k, res.isi[k]); });
+        }).fail(function (xhr) {
+            var pesan = (xhr.responseJSON && (xhr.responseJSON.pesan || xhr.responseJSON.message))
+                || 'Gagal menghubungi layanan AI.';
+            if (confirm(pesan + '\n\nPakai kerangka modul bawaan aplikasi sebagai gantinya?')) {
+                generateLokal(true);
+            }
+        }).always(function () {
+            $tombol.prop('disabled', false).html(labelAsli);
+        });
+    }
     $(function () {
         $('#mapel, #tingkat').on('change', muatCp);
         $('#pilih-cp').on('change', muatTp);

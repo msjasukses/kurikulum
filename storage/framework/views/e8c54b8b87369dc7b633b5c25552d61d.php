@@ -78,9 +78,8 @@
 
                 <?php endif; ?>
             </div>
-            <?php if(optional($identitas)->website): ?>
-                <a href="<?php echo e($identitas->website); ?>" class="tombol-beranda" target="_blank" rel="noopener">&larr; Beranda</a>
-            <?php endif; ?>
+            
+            <a href="<?php echo e(optional($identitas)->website ?: '../'); ?>" class="tombol-beranda">&larr; Beranda</a>
         </div>
 
         <h1>Selamat datang di <?php echo e(config('app.name')); ?>.</h1>

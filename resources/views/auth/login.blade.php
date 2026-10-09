@@ -77,9 +77,12 @@
                     {{ strtoupper(mb_substr($namaSekolah, 0, 1)) }}
                 @endif
             </div>
-            @if(optional($identitas)->website)
-                <a href="{{ $identitas->website }}" class="tombol-beranda" target="_blank" rel="noopener">&larr; Beranda</a>
-            @endif
+            {{-- Jalan pulang ke beranda sekolah, selalu tampil (sama seperti
+                 aplikasi ujian). Bila Website di Identitas Sekolah kosong,
+                 alamatnya relatif satu tingkat ke atas: aplikasi ini dipasang
+                 di folder di bawah beranda sekolah, jadi tautannya ikut
+                 berpindah sendiri ketika aplikasi dipindah server/alamat. --}}
+            <a href="{{ optional($identitas)->website ?: '../' }}" class="tombol-beranda">&larr; Beranda</a>
         </div>
 
         <h1>Selamat datang di {{ config('app.name') }}.</h1>

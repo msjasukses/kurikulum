@@ -18,6 +18,7 @@ use App\Http\Controllers\Kurikulum\ModulAjarController;
 use App\Http\Controllers\Kurikulum\PemetaanCpTpAtpController;
 use App\Http\Controllers\Kurikulum\PemetaanCpTpAtpImportController;
 use App\Http\Controllers\PilihTahunAjaranController;
+use App\Http\Controllers\Pkl\JurnalPklController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RuangBelajar\MateriOnlineController;
 use App\Http\Controllers\RuangBelajar\PengumpulanTugasController;
@@ -153,6 +154,18 @@ Route::middleware('auth')->group(function () {
         Route::post('tugas/{tugas}/kumpul', [PengumpulanTugasController::class, 'store'])->name('pengumpulan.store');
         Route::get('tugas/{tugas}/pengumpulan', [PengumpulanTugasController::class, 'daftar'])->name('pengumpulan.daftar');
         Route::post('pengumpulan/{pengumpulan}/nilai', [PengumpulanTugasController::class, 'nilai'])->name('pengumpulan.nilai');
+    });
+
+    // ================= Jurnal PKL / Magang (hak per role dibatasi di controller) =================
+    // Tanggal yang bisa diisi siswa mengikuti jadwal magang di aplikasi Absensi.
+    Route::middleware('role:admin,guru,siswa')->prefix('pkl')->name('pkl.')->group(function () {
+        Route::get('jurnal', [JurnalPklController::class, 'index'])->name('jurnal.index');
+        Route::get('jurnal/isi', [JurnalPklController::class, 'form'])->name('jurnal.form');
+        Route::post('jurnal', [JurnalPklController::class, 'store'])->name('jurnal.store');
+        Route::get('jurnal/cetak', [JurnalPklController::class, 'cetak'])->name('jurnal.cetak');
+        Route::get('jurnal/{jurnal}', [JurnalPklController::class, 'show'])->name('jurnal.show');
+        Route::post('jurnal/{jurnal}/periksa', [JurnalPklController::class, 'periksa'])->name('jurnal.periksa');
+        Route::delete('jurnal/{jurnal}', [JurnalPklController::class, 'destroy'])->name('jurnal.destroy');
     });
 
     // ================= Absensi =================

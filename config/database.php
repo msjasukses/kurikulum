@@ -56,6 +56,24 @@ return [
                 PDO::MYSQL_ATTR_SSL_CA => env('DATACENTER_MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
+
+        // Koneksi ketiga: database aplikasi Absensi. Dipakai untuk membaca
+        // jadwal magang/PKL siswa (tabel jadwal_magang) — read-only.
+        'absensi' => [
+            'driver' => env('ABSENSI_DB_CONNECTION', 'mysql'),
+            'host' => env('ABSENSI_DB_HOST', '127.0.0.1'),
+            'port' => env('ABSENSI_DB_PORT', '3306'),
+            'database' => env('ABSENSI_DB_DATABASE', 'absensi_sekolah'),
+            'username' => env('ABSENSI_DB_USERNAME', 'root'),
+            'password' => env('ABSENSI_DB_PASSWORD', ''),
+            'unix_socket' => env('ABSENSI_DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+        ],
     ],
 
     'migrations' => 'migrations',

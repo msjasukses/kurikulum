@@ -12,3 +12,14 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+/.claude
+
+# Berkas & cover buku digital hasil unduhan dari katalog SIBI. Ukurannya besar
+# (satu PDF bisa puluhan MB) dan selalu bisa diambil ulang dengan
+# `php artisan buku:unduh`, jadi tidak perlu ikut masuk repositori.
+/storage/app/public/buku-digital
+
+# Berkas modul ajar yang diunggah guru. Ini data milik sekolah, bukan bagian
+# dari kode aplikasi, jadi tidak ikut masuk repositori.
+/storage/app/public/uploads/modul_ajar
+

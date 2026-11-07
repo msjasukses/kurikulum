@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\TeksKaya;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class ModulAjar extends Model
 {
@@ -42,6 +43,8 @@ class ModulAjar extends Model
         'pegawai_id',
         'fase',
         'file',
+        'file_nama',
+        'file_ukuran',
         'deskripsi',
         'tahun_ajaran',
         'jumlah_jam',
@@ -67,6 +70,45 @@ class ModulAjar extends Model
         'lkpd_refleksi',
         'lkpd_asesmen',
     ];
+
+    /**
+     * Modul ini berasal dari berkas yang diunggah guru, bukan disusun lewat
+     * Generator. Isi per bagiannya kosong, jadi aksi cetak PDF/Word/LKPD
+     * tidak berlaku dan yang ditawarkan adalah unduh berkas aslinya.
+     */
+    public function dariUnggahan(): bool
+    {
+        return filled($this->file);
+    }
+
+    /** Berkas unggahan masih benar-benar ada di penyimpanan. */
+    public function fileTersedia(): bool
+    {
+        return filled($this->file) && Storage::disk('public')->exists($this->file);
+    }
+
+    public function urlFile(): ?string
+    {
+        return $this->fileTersedia() ? Storage::url($this->file) : null;
+    }
+
+    /** Ukuran berkas dalam satuan yang enak dibaca, mis. "1,4 MB". */
+    public function ukuranFileManusiawi(): ?string
+    {
+        if (! $this->file_ukuran) {
+            return null;
+        }
+
+        if ($this->file_ukuran < 1024) {
+            return $this->file_ukuran.' B';
+        }
+
+        $mb = $this->file_ukuran / 1048576;
+
+        return $mb < 1
+            ? number_format($this->file_ukuran / 1024, 0, ',', '.').' KB'
+            : number_format($mb, 1, ',', '.').' MB';
+    }
 
     /** Bersihkan HTML dari editor sebelum disimpan. */
     public static function bersihkanHtml(?string $nilai): ?string

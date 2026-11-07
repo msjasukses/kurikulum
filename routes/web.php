@@ -20,6 +20,7 @@ use App\Http\Controllers\Kurikulum\PemetaanCpTpAtpImportController;
 use App\Http\Controllers\PilihTahunAjaranController;
 use App\Http\Controllers\Pkl\JurnalPklController;
 use App\Http\Controllers\ProfilController;
+use App\Http\Controllers\RuangBelajar\KatalogBukuController;
 use App\Http\Controllers\RuangBelajar\MateriOnlineController;
 use App\Http\Controllers\RuangBelajar\PengumpulanTugasController;
 use App\Http\Controllers\RuangBelajar\TugasController;
@@ -129,6 +130,7 @@ Route::middleware('auth')->group(function () {
         Route::get('cp-tp-atp-cetak/word', [PemetaanCpTpAtpController::class, 'word'])->name('cp-tp-atp-cetak.word');
         Route::get('modul-ajar', [ModulAjarController::class, 'index'])->name('modul-ajar.index');
         Route::post('modul-ajar', [ModulAjarController::class, 'store'])->name('modul-ajar.store');
+        Route::post('modul-ajar/upload', [ModulAjarController::class, 'upload'])->name('modul-ajar.upload');
         Route::post('modul-ajar/generate', [ModulAjarController::class, 'generate'])->name('modul-ajar.generate');
         Route::delete('modul-ajar/{id}', [ModulAjarController::class, 'destroy'])->name('modul-ajar.destroy');
         Route::get('modul-ajar/{id}/pdf', [ModulAjarController::class, 'pdf'])->name('modul-ajar.pdf');
@@ -154,6 +156,14 @@ Route::middleware('auth')->group(function () {
         Route::post('tugas/{tugas}/kumpul', [PengumpulanTugasController::class, 'store'])->name('pengumpulan.store');
         Route::get('tugas/{tugas}/pengumpulan', [PengumpulanTugasController::class, 'daftar'])->name('pengumpulan.daftar');
         Route::post('pengumpulan/{pengumpulan}/nilai', [PengumpulanTugasController::class, 'nilai'])->name('pengumpulan.nilai');
+
+        // Katalog buku digital hasil sinkron dari SIBI Kemendikdasmen. Semua
+        // role boleh menelusuri & membaca; unduh/sinkron dibatasi di controller.
+        Route::get('katalog-buku', [KatalogBukuController::class, 'index'])->name('katalog-buku.index');
+        Route::get('katalog-buku/{buku}', [KatalogBukuController::class, 'show'])->name('katalog-buku.show');
+        Route::get('katalog-buku/{buku}/baca', [KatalogBukuController::class, 'baca'])->name('katalog-buku.baca');
+        Route::post('katalog-buku/{buku}/unduh', [KatalogBukuController::class, 'unduh'])->name('katalog-buku.unduh');
+        Route::post('katalog-buku-sinkron', [KatalogBukuController::class, 'sinkron'])->name('katalog-buku.sinkron');
     });
 
     // ================= Jurnal PKL / Magang (hak per role dibatasi di controller) =================

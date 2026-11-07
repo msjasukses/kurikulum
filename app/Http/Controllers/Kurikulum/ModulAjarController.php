@@ -14,6 +14,7 @@ use App\Support\TeksKaya;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
@@ -105,6 +106,94 @@ class ModulAjarController extends Controller
     }
 
     /**
+     * Unggah modul ajar yang sudah jadi (PDF/Word) sebagai alternatif
+     * menyusunnya lewat Generator. Berkasnya disimpan di disk `public` dan
+     * modulnya tetap masuk ke Daftar Modul Ajar yang sama.
+     *
+     * Nama input diberi awalan "unggah_" karena form ini berada di halaman
+     * yang sama dengan form Generator; tanpa itu, old() hasil validasi yang
+     * gagal akan saling mengisi antar-form.
+     */
+    public function upload(Request $request): RedirectResponse
+    {
+        $data = $request->validateWithBag('unggah', [
+            'unggah_judul' => 'required|string|max:150',
+            // Mapel & Tingkat berada di database "datacenter", bukan database
+            // lokal, jadi koneksinya disebut eksplisit pada aturan exists.
+            'unggah_mata_pelajaran_id' => 'required|integer|exists:datacenter.mata_pelajaran,id',
+            'unggah_tingkat_kelas_id' => 'required|integer|exists:datacenter.tingkat_kelas,id',
+            'unggah_semester' => 'required|in:Ganjil,Genap',
+            'unggah_tahun_ajaran' => 'required|string|max:20',
+            'unggah_pertemuan_ke' => 'nullable|integer|min:1',
+            'unggah_deskripsi' => 'nullable|string|max:1000',
+            'unggah_file' => 'required|file|mimes:pdf,doc,docx|max:10240',
+        ], [
+            // Aplikasi belum punya berkas terjemahan, jadi pesan untuk form
+            // ini ditulis langsung agar seragam dengan label berbahasa Indonesia.
+            'required' => ':attribute wajib diisi.',
+            'unggah_file.required' => 'Berkas modul wajib dipilih.',
+            'unggah_file.mimes' => 'Berkas modul harus berformat PDF atau Word (.doc/.docx).',
+            'unggah_file.max' => 'Ukuran berkas modul maksimal 10 MB.',
+            'unggah_file.file' => 'Berkas modul tidak terbaca, coba unggah ulang.',
+            'integer' => ':attribute harus berupa angka.',
+            'exists' => ':attribute yang dipilih tidak ditemukan.',
+            'in' => ':attribute yang dipilih tidak sah.',
+            'max.string' => ':attribute maksimal :max karakter.',
+            'min' => ':attribute minimal :min.',
+        ], [
+            'unggah_judul' => 'Judul Modul',
+            'unggah_mata_pelajaran_id' => 'Mata Pelajaran',
+            'unggah_tingkat_kelas_id' => 'Tingkat',
+            'unggah_semester' => 'Semester',
+            'unggah_tahun_ajaran' => 'Tahun Ajaran',
+            'unggah_pertemuan_ke' => 'Pertemuan Ke',
+            'unggah_deskripsi' => 'Keterangan',
+            'unggah_file' => 'Berkas Modul',
+        ]);
+
+        // Guru hanya boleh mengunggah untuk mapel/tingkat yang ditugaskan
+        // kepadanya; admin tidak dibatasi.
+        $this->pastikanDalamPenugasan(
+            (int) $data['unggah_mata_pelajaran_id'],
+            (int) $data['unggah_tingkat_kelas_id']
+        );
+
+        $berkas = $request->file('unggah_file');
+
+        ModulAjar::create([
+            'judul' => $data['unggah_judul'],
+            'mata_pelajaran_id' => $data['unggah_mata_pelajaran_id'],
+            'tingkat_kelas_id' => $data['unggah_tingkat_kelas_id'],
+            'semester' => $data['unggah_semester'],
+            'tahun_ajaran' => $data['unggah_tahun_ajaran'],
+            'pertemuan_ke' => $data['unggah_pertemuan_ke'] ?? null,
+            'deskripsi' => $data['unggah_deskripsi'] ?? null,
+            'pegawai_id' => auth()->user()->pegawai_id,
+            'file' => $berkas->store('uploads/modul_ajar', 'public'),
+            'file_nama' => $berkas->getClientOriginalName(),
+            'file_ukuran' => $berkas->getSize(),
+        ]);
+
+        return redirect()->route('kurikulum.modul-ajar.index')
+            ->with('success', 'Modul ajar "'.$data['unggah_judul'].'" berhasil diunggah.');
+    }
+
+    /**
+     * Tolak bila guru memilih mapel/tingkat di luar penugasannya. Daftar
+     * penugasan bernilai null untuk admin, yang berarti tanpa batasan.
+     */
+    private function pastikanDalamPenugasan(int $mapelId, int $tingkatId): void
+    {
+        $mapelIds = $this->mapelIdsGuru();
+        $tingkatIds = $this->tingkatIdsGuru();
+
+        abort_if($mapelIds !== null && ! in_array($mapelId, $mapelIds), 403,
+            'Mata pelajaran tersebut di luar penugasan Anda.');
+        abort_if($tingkatIds !== null && ! in_array($tingkatId, $tingkatIds), 403,
+            'Tingkat tersebut di luar penugasan Anda.');
+    }
+
+    /**
      * Susun isi modul & LKPD dengan AI dari konteks yang sudah dipilih di
      * form. Penyedia dan kunci API mengikuti pengaturan akun yang login
      * (Setting Profil). Dipanggil lewat AJAX oleh tombol "Generate Modul Ajar".
@@ -171,7 +260,14 @@ class ModulAjarController extends Controller
 
     public function destroy(int $id): RedirectResponse
     {
-        ModulAjar::findOrFail($id)->delete();
+        $modul = ModulAjar::findOrFail($id);
+
+        // Berkas unggahan ikut dibuang supaya tidak menumpuk di penyimpanan.
+        if (filled($modul->file)) {
+            Storage::disk('public')->delete($modul->file);
+        }
+
+        $modul->delete();
 
         return redirect()->route('kurikulum.modul-ajar.index')
             ->with('success', 'Modul ajar berhasil dihapus.');

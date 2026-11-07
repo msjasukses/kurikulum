@@ -133,6 +133,105 @@
     </div>
 </div>
 
+{{-- ===================== Unggah Modul Ajar ===================== --}}
+@php($adaGalatUnggah = $errors->unggah->any())
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <button class="btn btn-link p-0 text-decoration-none fw-semibold text-dark d-flex align-items-center w-100"
+                type="button" data-bs-toggle="collapse" data-bs-target="#form-unggah-wrap"
+                aria-expanded="{{ $adaGalatUnggah ? 'true' : 'false' }}">
+            <i class="bi bi-upload me-2"></i>Unggah Modul Ajar
+            <span class="text-muted fw-normal small ms-2 d-none d-md-inline">
+                sudah punya berkas modul? unggah langsung tanpa lewat Generator
+            </span>
+            <i class="bi bi-chevron-down ms-auto small"></i>
+        </button>
+    </div>
+    <div class="collapse {{ $adaGalatUnggah ? 'show' : '' }}" id="form-unggah-wrap">
+        <div class="card-body">
+            @if($adaGalatUnggah)
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach($errors->unggah->all() as $error)<li>{{ $error }}</li>@endforeach
+                    </ul>
+                </div>
+            @endif
+
+            {{-- Nama input diberi awalan "unggah_" supaya old() tidak saling
+                 mengisi dengan form Generator di halaman yang sama. --}}
+            <form method="POST" action="{{ route('kurikulum.modul-ajar.upload') }}" enctype="multipart/form-data">
+                @csrf
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Judul Modul <span class="text-danger">*</span></label>
+                        <input type="text" name="unggah_judul" class="form-control" maxlength="150"
+                               value="{{ old('unggah_judul') }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Mata Pelajaran <span class="text-danger">*</span></label>
+                        <select name="unggah_mata_pelajaran_id" class="form-select" required>
+                            <option value="">-- Pilih Mapel --</option>
+                            @foreach($mapelList as $m)
+                                <option value="{{ $m->id }}" {{ (string) old('unggah_mata_pelajaran_id') === (string) $m->id ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tingkat <span class="text-danger">*</span></label>
+                        <select name="unggah_tingkat_kelas_id" class="form-select" required>
+                            <option value="">-- Pilih Tingkat --</option>
+                            @foreach($tingkatList as $t)
+                                <option value="{{ $t->id }}" {{ (string) old('unggah_tingkat_kelas_id') === (string) $t->id ? 'selected' : '' }}>{{ $t->nama ?? $t->kode }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Semester <span class="text-danger">*</span></label>
+                        <select name="unggah_semester" class="form-select" required>
+                            <option value="">-- Pilih Semester --</option>
+                            @foreach(['Ganjil', 'Genap'] as $smt)
+                                <option value="{{ $smt }}" {{ old('unggah_semester') === $smt ? 'selected' : '' }}>{{ $smt }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tahun Ajaran <span class="text-danger">*</span></label>
+                        <select name="unggah_tahun_ajaran" class="form-select" required>
+                            <option value="">-- Pilih Tahun Ajaran --</option>
+                            @foreach($tahunList as $ta)
+                                <option value="{{ $ta->nama_tahun_ajaran }}"
+                                    {{ old('unggah_tahun_ajaran', optional($tahunAktif)->nama_tahun_ajaran) === $ta->nama_tahun_ajaran ? 'selected' : '' }}>
+                                    {{ $ta->nama_tahun_ajaran }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Pertemuan Ke</label>
+                        <input type="number" name="unggah_pertemuan_ke" class="form-control" min="1"
+                               value="{{ old('unggah_pertemuan_ke') }}" placeholder="opsional">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Berkas Modul <span class="text-danger">*</span></label>
+                        <input type="file" name="unggah_file" class="form-control" accept=".pdf,.doc,.docx" required>
+                        <div class="form-text">Format PDF atau Word (.doc/.docx), ukuran maksimal 10 MB.</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Keterangan</label>
+                        <textarea name="unggah_deskripsi" class="form-control" rows="2" maxlength="1000"
+                                  placeholder="opsional">{{ old('unggah_deskripsi') }}</textarea>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-1"></i>Unggah Modul
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {{-- ===================== Daftar Modul Ajar ===================== --}}
 <div class="card shadow-sm">
     <div class="card-header bg-white">
@@ -161,11 +260,36 @@
                     <td class="text-center">{{ $item->pertemuan_ke ?? '-' }}</td>
                     <td>{{ $item->semester ?? '-' }}</td>
                     <td>{{ $item->tahun_ajaran ?? '-' }}</td>
-                    <td>{{ $item->judul }}</td>
                     <td>
-                        <a href="{{ route('kurikulum.modul-ajar.pdf', $item->id) }}" class="btn btn-sm btn-danger" title="Download PDF">PDF</a>
-                        <a href="{{ route('kurikulum.modul-ajar.word', $item->id) }}" class="btn btn-sm btn-success" title="Download Word">Word</a>
-                        <a href="{{ route('kurikulum.modul-ajar.lkpd', $item->id) }}" class="btn btn-sm btn-info text-white" title="Download LKPD">LKPD</a>
+                        {{ $item->judul }}
+                        @if($item->dariUnggahan())
+                            <div class="text-muted small">
+                                <i class="bi bi-paperclip me-1"></i>{{ $item->file_nama ?? 'berkas unggahan' }}
+                                @if($item->ukuranFileManusiawi())
+                                    <span class="text-black-50">({{ $item->ukuranFileManusiawi() }})</span>
+                                @endif
+                            </div>
+                        @endif
+                    </td>
+                    <td>
+                        {{-- Modul unggahan tidak punya isi per bagian, jadi yang
+                             ditawarkan berkas aslinya, bukan cetak PDF/Word/LKPD. --}}
+                        @if($item->dariUnggahan())
+                            @if($item->urlFile())
+                                <a href="{{ $item->urlFile() }}" target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-primary" title="Unduh berkas modul">
+                                    <i class="bi bi-download me-1"></i>Unduh
+                                </a>
+                            @else
+                                <span class="badge bg-warning text-dark" title="Berkas tidak ditemukan di penyimpanan">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Berkas hilang
+                                </span>
+                            @endif
+                        @else
+                            <a href="{{ route('kurikulum.modul-ajar.pdf', $item->id) }}" class="btn btn-sm btn-danger" title="Download PDF">PDF</a>
+                            <a href="{{ route('kurikulum.modul-ajar.word', $item->id) }}" class="btn btn-sm btn-success" title="Download Word">Word</a>
+                            <a href="{{ route('kurikulum.modul-ajar.lkpd', $item->id) }}" class="btn btn-sm btn-info text-white" title="Download LKPD">LKPD</a>
+                        @endif
                         <form action="{{ route('kurikulum.modul-ajar.destroy', $item->id) }}" method="POST" class="d-inline"
                               onsubmit="return confirm('Hapus modul ajar ini?')">
                             @csrf @method('DELETE')

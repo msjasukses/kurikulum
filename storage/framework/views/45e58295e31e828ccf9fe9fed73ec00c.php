@@ -135,6 +135,105 @@
 </div>
 
 
+<?php ($adaGalatUnggah = $errors->unggah->any()); ?>
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <button class="btn btn-link p-0 text-decoration-none fw-semibold text-dark d-flex align-items-center w-100"
+                type="button" data-bs-toggle="collapse" data-bs-target="#form-unggah-wrap"
+                aria-expanded="<?php echo e($adaGalatUnggah ? 'true' : 'false'); ?>">
+            <i class="bi bi-upload me-2"></i>Unggah Modul Ajar
+            <span class="text-muted fw-normal small ms-2 d-none d-md-inline">
+                sudah punya berkas modul? unggah langsung tanpa lewat Generator
+            </span>
+            <i class="bi bi-chevron-down ms-auto small"></i>
+        </button>
+    </div>
+    <div class="collapse <?php echo e($adaGalatUnggah ? 'show' : ''); ?>" id="form-unggah-wrap">
+        <div class="card-body">
+            <?php if($adaGalatUnggah): ?>
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        <?php $__currentLoopData = $errors->unggah->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><li><?php echo e($error); ?></li><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            
+            <form method="POST" action="<?php echo e(route('kurikulum.modul-ajar.upload')); ?>" enctype="multipart/form-data">
+                <?php echo csrf_field(); ?>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Judul Modul <span class="text-danger">*</span></label>
+                        <input type="text" name="unggah_judul" class="form-control" maxlength="150"
+                               value="<?php echo e(old('unggah_judul')); ?>" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Mata Pelajaran <span class="text-danger">*</span></label>
+                        <select name="unggah_mata_pelajaran_id" class="form-select" required>
+                            <option value="">-- Pilih Mapel --</option>
+                            <?php $__currentLoopData = $mapelList; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $m): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($m->id); ?>" <?php echo e((string) old('unggah_mata_pelajaran_id') === (string) $m->id ? 'selected' : ''); ?>><?php echo e($m->nama_mapel); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tingkat <span class="text-danger">*</span></label>
+                        <select name="unggah_tingkat_kelas_id" class="form-select" required>
+                            <option value="">-- Pilih Tingkat --</option>
+                            <?php $__currentLoopData = $tingkatList; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($t->id); ?>" <?php echo e((string) old('unggah_tingkat_kelas_id') === (string) $t->id ? 'selected' : ''); ?>><?php echo e($t->nama ?? $t->kode); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Semester <span class="text-danger">*</span></label>
+                        <select name="unggah_semester" class="form-select" required>
+                            <option value="">-- Pilih Semester --</option>
+                            <?php $__currentLoopData = ['Ganjil', 'Genap']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $smt): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($smt); ?>" <?php echo e(old('unggah_semester') === $smt ? 'selected' : ''); ?>><?php echo e($smt); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tahun Ajaran <span class="text-danger">*</span></label>
+                        <select name="unggah_tahun_ajaran" class="form-select" required>
+                            <option value="">-- Pilih Tahun Ajaran --</option>
+                            <?php $__currentLoopData = $tahunList; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ta): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($ta->nama_tahun_ajaran); ?>"
+                                    <?php echo e(old('unggah_tahun_ajaran', optional($tahunAktif)->nama_tahun_ajaran) === $ta->nama_tahun_ajaran ? 'selected' : ''); ?>>
+                                    <?php echo e($ta->nama_tahun_ajaran); ?>
+
+                                </option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Pertemuan Ke</label>
+                        <input type="number" name="unggah_pertemuan_ke" class="form-control" min="1"
+                               value="<?php echo e(old('unggah_pertemuan_ke')); ?>" placeholder="opsional">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Berkas Modul <span class="text-danger">*</span></label>
+                        <input type="file" name="unggah_file" class="form-control" accept=".pdf,.doc,.docx" required>
+                        <div class="form-text">Format PDF atau Word (.doc/.docx), ukuran maksimal 10 MB.</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Keterangan</label>
+                        <textarea name="unggah_deskripsi" class="form-control" rows="2" maxlength="1000"
+                                  placeholder="opsional"><?php echo e(old('unggah_deskripsi')); ?></textarea>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-1"></i>Unggah Modul
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 <div class="card shadow-sm">
     <div class="card-header bg-white">
         <span class="fw-semibold"><i class="bi bi-journal-text me-2"></i>Daftar Modul Ajar</span>
@@ -162,11 +261,37 @@
                     <td class="text-center"><?php echo e($item->pertemuan_ke ?? '-'); ?></td>
                     <td><?php echo e($item->semester ?? '-'); ?></td>
                     <td><?php echo e($item->tahun_ajaran ?? '-'); ?></td>
-                    <td><?php echo e($item->judul); ?></td>
                     <td>
-                        <a href="<?php echo e(route('kurikulum.modul-ajar.pdf', $item->id)); ?>" class="btn btn-sm btn-danger" title="Download PDF">PDF</a>
-                        <a href="<?php echo e(route('kurikulum.modul-ajar.word', $item->id)); ?>" class="btn btn-sm btn-success" title="Download Word">Word</a>
-                        <a href="<?php echo e(route('kurikulum.modul-ajar.lkpd', $item->id)); ?>" class="btn btn-sm btn-info text-white" title="Download LKPD">LKPD</a>
+                        <?php echo e($item->judul); ?>
+
+                        <?php if($item->dariUnggahan()): ?>
+                            <div class="text-muted small">
+                                <i class="bi bi-paperclip me-1"></i><?php echo e($item->file_nama ?? 'berkas unggahan'); ?>
+
+                                <?php if($item->ukuranFileManusiawi()): ?>
+                                    <span class="text-black-50">(<?php echo e($item->ukuranFileManusiawi()); ?>)</span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        
+                        <?php if($item->dariUnggahan()): ?>
+                            <?php if($item->urlFile()): ?>
+                                <a href="<?php echo e($item->urlFile()); ?>" target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-primary" title="Unduh berkas modul">
+                                    <i class="bi bi-download me-1"></i>Unduh
+                                </a>
+                            <?php else: ?>
+                                <span class="badge bg-warning text-dark" title="Berkas tidak ditemukan di penyimpanan">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Berkas hilang
+                                </span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <a href="<?php echo e(route('kurikulum.modul-ajar.pdf', $item->id)); ?>" class="btn btn-sm btn-danger" title="Download PDF">PDF</a>
+                            <a href="<?php echo e(route('kurikulum.modul-ajar.word', $item->id)); ?>" class="btn btn-sm btn-success" title="Download Word">Word</a>
+                            <a href="<?php echo e(route('kurikulum.modul-ajar.lkpd', $item->id)); ?>" class="btn btn-sm btn-info text-white" title="Download LKPD">LKPD</a>
+                        <?php endif; ?>
                         <form action="<?php echo e(route('kurikulum.modul-ajar.destroy', $item->id)); ?>" method="POST" class="d-inline"
                               onsubmit="return confirm('Hapus modul ajar ini?')">
                             <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>

@@ -14,6 +14,15 @@ return [
         'model' => env('ANTHROPIC_MODEL', 'claude-opus-5'),
     ],
 
+    /*
+    | Lokasi pdftotext (bagian dari Poppler) untuk membaca Daftar Isi berkas
+    | PDF buku digital. Bila kosong, aplikasi mencari sendiri di PATH dan di
+    | lokasi umum; kalau tetap tidak ada, ekstraksi bab dari PDF dilewati.
+    */
+    'pdftotext' => [
+        'path' => env('PDFTOTEXT_PATH'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

@@ -117,6 +117,7 @@
         <div class="collapse menu-sub {{ $open ? 'show' : '' }}" id="grpRuangBelajar" data-bs-parent="#sidebarNav">
             <a class="nav-link px-3 py-2 {{ request()->routeIs('ruangbelajar.materi*') ? 'active':'' }}" href="{{ route('ruangbelajar.materi.index') }}"><i class="bi bi-play-btn me-2"></i>Materi Online</a>
             <a class="nav-link px-3 py-2 {{ request()->routeIs('ruangbelajar.tugas*') ? 'active':'' }}" href="{{ route('ruangbelajar.tugas.index') }}"><i class="bi bi-clipboard-check me-2"></i>Tugas</a>
+            <a class="nav-link px-3 py-2 {{ request()->routeIs('ruangbelajar.katalog-buku*') ? 'active':'' }}" href="{{ route('ruangbelajar.katalog-buku.index') }}"><i class="bi bi-book me-2"></i>Katalog Buku Digital</a>
         </div>
 
         <a class="nav-link px-3 py-2 {{ request()->routeIs('pkl.jurnal*') ? 'active' : '' }}" href="{{ route('pkl.jurnal.index') }}">
